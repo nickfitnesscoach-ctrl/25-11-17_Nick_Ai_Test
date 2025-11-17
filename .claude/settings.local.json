@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(. venv/Scripts/activate)",
+      "Bash(alembic revision:*)",
+      "Bash(pip install:*)",
+      "Bash(timeout 10 python:*)",
+      "Bash(timeout 5 python:*)",
+      "Bash(python -m bot:*)",
+      "Bash(timeout 3 echo:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(venvScriptspython.exe -m bot)",
+      "Bash(.venvScriptspython.exe -m bot)",
+      "Bash(./venv/Scripts/python.exe:*)",
+      "Bash(psql:*)",
+      "Bash(where:*)",
+      "Bash(dir:*)",
+      "Bash(nul)",
+      "Bash(Select-String -Pattern \"Trying|SUCCESS|FAILED|Database\")",
+      "Bash(ForEach-Object { $_ine })",
+      "Bash(docker --version:*)",
+      "Bash(docker-compose:*)",
+      "Bash(\"C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe\" --version)",
+      "Bash(docker.exe --version:*)",
+      "Bash(cmd.exe /c \"docker --version\")",
+      "Bash(powershell.exe -Command \"docker --version\")",
+      "Bash(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@85.198.81.133 \"echo ''Connection test successful'' && uname -a\")",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

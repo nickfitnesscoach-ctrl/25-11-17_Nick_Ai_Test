@@ -1,0 +1,25 @@
+"""
+Константы бота.
+"""
+
+from .survey import (
+    ACTIVITY_LEVELS,
+    BODY_LABELS,
+    BODY_COUNTS,
+    POPULAR_TIMEZONES,
+    UTC_TO_IANA_MAPPING,
+    VALIDATION_LIMITS,
+    TOTAL_STEPS,
+    STEP_NAMES,
+)
+
+__all__ = [
+    "ACTIVITY_LEVELS",
+    "BODY_LABELS",
+    "BODY_COUNTS",
+    "POPULAR_TIMEZONES",
+    "UTC_TO_IANA_MAPPING",
+    "VALIDATION_LIMITS",
+    "TOTAL_STEPS",
+    "STEP_NAMES",
+]
