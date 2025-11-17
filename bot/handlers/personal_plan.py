@@ -114,6 +114,11 @@ async def process_age(message: Message, state: FSMContext):
     age = validate_age(message.text)
 
     if age is None:
+        # Удалить сообщение пользователя с некорректным вводом
+        try:
+            await message.delete()
+        except Exception:
+            pass
         error_msg = await message.answer(AGE_INVALID, parse_mode="HTML", disable_notification=True)
         await state.update_data(last_bot_message_id=error_msg.message_id)
         return
@@ -156,6 +161,11 @@ async def process_height(message: Message, state: FSMContext):
     height = validate_height(message.text)
 
     if height is None:
+        # Удалить сообщение пользователя с некорректным вводом
+        try:
+            await message.delete()
+        except Exception:
+            pass
         error_msg = await message.answer(HEIGHT_INVALID, parse_mode="HTML", disable_notification=True)
         await state.update_data(last_bot_message_id=error_msg.message_id)
         return
@@ -198,6 +208,11 @@ async def process_weight(message: Message, state: FSMContext):
     weight = validate_weight(message.text)
 
     if weight is None:
+        # Удалить сообщение пользователя с некорректным вводом
+        try:
+            await message.delete()
+        except Exception:
+            pass
         error_msg = await message.answer(WEIGHT_INVALID, parse_mode="HTML", disable_notification=True)
         await state.update_data(last_bot_message_id=error_msg.message_id)
         return
@@ -246,6 +261,11 @@ async def process_target_weight_text(message: Message, state: FSMContext):
 
     if parsed_weight is None:
         # Не является валидным числом
+        # Удалить сообщение пользователя с некорректным вводом
+        try:
+            await message.delete()
+        except Exception:
+            pass
         error_msg = await message.answer(TARGET_WEIGHT_INVALID, parse_mode="HTML", disable_notification=True)
         await state.update_data(last_bot_message_id=error_msg.message_id)
         return
@@ -253,6 +273,11 @@ async def process_target_weight_text(message: Message, state: FSMContext):
     # Проверяем, совпадает ли с текущим весом
     if abs(parsed_weight - current_weight) < 0.1:
         # Целевой вес совпадает с текущим
+        # Удалить сообщение пользователя с некорректным вводом
+        try:
+            await message.delete()
+        except Exception:
+            pass
         error_msg = await message.answer(TARGET_WEIGHT_SAME_AS_CURRENT, parse_mode="HTML", disable_notification=True)
         await state.update_data(last_bot_message_id=error_msg.message_id)
         return
@@ -261,6 +286,11 @@ async def process_target_weight_text(message: Message, state: FSMContext):
     target_weight = validate_target_weight(message.text, current_weight)
 
     if target_weight is None:
+        # Удалить сообщение пользователя с некорректным вводом
+        try:
+            await message.delete()
+        except Exception:
+            pass
         error_msg = await message.answer(TARGET_WEIGHT_INVALID, parse_mode="HTML", disable_notification=True)
         await state.update_data(last_bot_message_id=error_msg.message_id)
         return
@@ -498,6 +528,11 @@ async def process_tz_manual(message: Message, state: FSMContext):
     result = validate_and_normalize_timezone(message.text)
 
     if result is None:
+        # Удалить сообщение пользователя с некорректным вводом
+        try:
+            await message.delete()
+        except Exception:
+            pass
         error_msg = await message.answer(TZ_INVALID, parse_mode="HTML", disable_notification=True)
         await state.update_data(last_bot_message_id=error_msg.message_id)
         return
