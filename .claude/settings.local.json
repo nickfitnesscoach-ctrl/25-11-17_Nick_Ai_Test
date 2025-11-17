@@ -30,7 +30,20 @@
       "Bash(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@85.198.81.133 \"echo ''Connection test successful'' && uname -a\")",
       "Bash(git init:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"cd /opt/calorie_bot && git pull && docker compose up -d --build bot\")",
+      "Bash(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@85.198.81.133 \"cd /opt/calorie_bot && git pull\")",
+      "Bash(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@85.198.81.133 \"ls -la /root/bots/\")",
+      "Bash(cat:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"cd /root/bots/25-11-17_Nick_Ai_Test && git pull && docker compose up -d --build bot\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"cd /root/bots/calorie_bot && git pull && docker compose up -d --build bot\")",
+      "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"docker compose -f /root/bots/calorie_bot/docker-compose.yml logs --tail=30 bot\")",
+      "Bash(ssh:*)"
     ],
     "deny": [],
     "ask": []

@@ -5,6 +5,7 @@
 from .survey import (
     ACTIVITY_LEVELS,
     BODY_LABELS,
+    BODY_DESCRIPTIONS,
     BODY_COUNTS,
     POPULAR_TIMEZONES,
     UTC_TO_IANA_MAPPING,
@@ -16,6 +17,7 @@ from .survey import (
 __all__ = [
     "ACTIVITY_LEVELS",
     "BODY_LABELS",
+    "BODY_DESCRIPTIONS",
     "BODY_COUNTS",
     "POPULAR_TIMEZONES",
     "UTC_TO_IANA_MAPPING",
