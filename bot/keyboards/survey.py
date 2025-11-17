@@ -132,8 +132,8 @@ def get_contact_trainer_keyboard(trainer_username: str = None) -> InlineKeyboard
     if trainer_username:
         url = f"https://t.me/{trainer_username}"
     else:
-        # Можно указать дефолтный username или ID админа
-        url = "https://t.me/nickfitnesscoach"  # Замените на реальный username тренера
+        # Дефолтный username тренера
+        url = "https://t.me/NicolasBatalin"
 
     builder.row(
         InlineKeyboardButton(text="✉️ Написать тренеру", url=url)
