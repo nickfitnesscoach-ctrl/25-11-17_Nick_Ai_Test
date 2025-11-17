@@ -181,26 +181,25 @@ TZ_QUESTION = """🌍 <b>Шаг 9 из 9: Укажите ваш часовой �
 
 TZ_MANUAL_INPUT = """✏️ Введите часовой пояс вручную.
 
-<b>Формат IANA:</b> <code>Europe/London</code>, <code>Asia/Tokyo</code>
-<b>Формат UTC:</b> <code>UTC+3</code>, <code>UTC-5</code>
-<b>Страна/город:</b> <code>Испания</code>, <code>Spain</code>, <code>Москва</code>
-
 Примеры:
-• <code>Europe/Paris</code>
-• <code>America/New_York</code>
-• <code>UTC+2</code>
-• <code>Испания</code>
-• <code>Madrid</code>"""
+• <code>Европа</code>
+• <code>Америка</code>
+• <code>Москва</code>
+• <code>Лондон</code>
+• <code>Мадрид</code>
+• <code>Астана</code>
+• <code>UTC+3</code>"""
 
 TZ_INVALID = """❌ Некорректный часовой пояс.
 
-Примеры правильного формата:
-• <code>Europe/London</code>
-• <code>Asia/Tokyo</code>
+Примеры:
+• <code>Европа</code>
+• <code>Америка</code>
+• <code>Москва</code>
+• <code>Лондон</code>
+• <code>Мадрид</code>
+• <code>Астана</code>
 • <code>UTC+3</code>
-• <code>UTC-5</code>
-• <code>Испания</code>
-• <code>Madrid</code>
 
 Попробуйте снова."""
 

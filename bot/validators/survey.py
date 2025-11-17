@@ -8,39 +8,21 @@ from typing import Optional
 
 from bot.constants import VALIDATION_LIMITS, UTC_TO_IANA_MAPPING
 
-# Маппинг популярных стран и городов на IANA timezones
+# Маппинг популярных регионов, стран и городов на IANA timezones
 COUNTRY_CITY_TO_IANA = {
-    # Страны (английские названия)
-    "spain": "Europe/Madrid",
-    "madrid": "Europe/Madrid",
-    "barcelona": "Europe/Madrid",
-    "russia": "Europe/Moscow",
-    "moscow": "Europe/Moscow",
-    "germany": "Europe/Berlin",
-    "berlin": "Europe/Berlin",
-    "france": "Europe/Paris",
-    "paris": "Europe/Paris",
-    "uk": "Europe/London",
-    "london": "Europe/London",
-    "usa": "America/New_York",
-    "new york": "America/New_York",
-    "los angeles": "America/Los_Angeles",
-    "chicago": "America/Chicago",
-    "italy": "Europe/Rome",
-    "rome": "Europe/Rome",
-    "japan": "Asia/Tokyo",
-    "tokyo": "Asia/Tokyo",
-    "china": "Asia/Shanghai",
-    "beijing": "Asia/Shanghai",
-    "india": "Asia/Kolkata",
-    "dubai": "Asia/Dubai",
+    # Регионы (русские названия)
+    "европа": "Europe/Paris",
+    "америка": "America/New_York",
+    "азия": "Asia/Tokyo",
 
-    # Страны (русские названия)
+    # Страны и города (русские названия)
     "испания": "Europe/Madrid",
     "мадрид": "Europe/Madrid",
     "барселона": "Europe/Madrid",
     "россия": "Europe/Moscow",
     "москва": "Europe/Moscow",
+    "санкт-петербург": "Europe/Moscow",
+    "питер": "Europe/Moscow",
     "германия": "Europe/Berlin",
     "берлин": "Europe/Berlin",
     "франция": "Europe/Paris",
@@ -57,6 +39,21 @@ COUNTRY_CITY_TO_IANA = {
     "пекин": "Asia/Shanghai",
     "индия": "Asia/Kolkata",
     "дубай": "Asia/Dubai",
+    "казахстан": "Asia/Almaty",
+    "астана": "Asia/Almaty",
+    "алматы": "Asia/Almaty",
+    "украина": "Europe/Kyiv",
+    "киев": "Europe/Kyiv",
+    "беларусь": "Europe/Minsk",
+    "минск": "Europe/Minsk",
+    "турция": "Europe/Istanbul",
+    "стамбул": "Europe/Istanbul",
+    "грузия": "Asia/Tbilisi",
+    "тбилиси": "Asia/Tbilisi",
+    "армения": "Asia/Yerevan",
+    "ереван": "Asia/Yerevan",
+    "азербайджан": "Asia/Baku",
+    "баку": "Asia/Baku",
 }
 
 
