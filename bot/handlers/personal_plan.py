@@ -67,6 +67,9 @@ async def start_survey(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     log_survey_started(user_id)
 
+    # Очистить старое состояние перед началом нового опроса
+    await state.clear()
+
     await state.set_state(SurveyStates.GENDER)
     await callback.message.edit_text(
         GENDER_QUESTION,
