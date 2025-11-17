@@ -7,7 +7,7 @@ from typing import Dict, Any
 from bot.constants import BODY_DESCRIPTIONS
 
 # Версия промпта (для отслеживания в БД)
-PROMPT_VERSION = "v2.3"
+PROMPT_VERSION = "v2.3.1"
 
 
 SYSTEM_PROMPT_RU = """Ты — профессиональный фитнес-консультант с опытом работы более 10 лет, который создаёт персонализированные планы питания и тренировок.
