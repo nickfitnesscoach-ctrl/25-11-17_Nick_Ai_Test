@@ -685,6 +685,14 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
         else:
             await callback.message.answer(plan_message, parse_mode="HTML", disable_notification=True)
 
+        # Отправить призыв к действию с кнопкой контакта тренера
+        await callback.message.answer(
+            CONTACT_TRAINER_CTA,
+            reply_markup=get_contact_trainer_keyboard(),
+            parse_mode="HTML",
+            disable_notification=True
+        )
+
         # Очистить FSM состояние
         await state.clear()
 

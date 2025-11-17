@@ -117,3 +117,26 @@ def get_start_survey_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🚀 Начать опрос", callback_data="survey:start")
     )
     return builder.as_markup()
+
+
+def get_contact_trainer_keyboard(trainer_username: str = None) -> InlineKeyboardMarkup:
+    """
+    Клавиатура со ссылкой на тренера.
+
+    Args:
+        trainer_username: Username тренера в Telegram (без @)
+    """
+    builder = InlineKeyboardBuilder()
+
+    # Если указан username, создаём прямую ссылку на диалог
+    if trainer_username:
+        url = f"https://t.me/{trainer_username}"
+    else:
+        # Можно указать дефолтный username или ID админа
+        url = "https://t.me/nickfitnesscoach"  # Замените на реальный username тренера
+
+    builder.row(
+        InlineKeyboardButton(text="✉️ Написать тренеру", url=url)
+    )
+
+    return builder.as_markup()
