@@ -8,6 +8,7 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
 from bot.config import settings
+from bot.utils.secret_filter import apply_secret_filter_to_logger
 
 
 def setup_logger(name: str = "bot") -> logging.Logger:
@@ -59,6 +60,15 @@ def setup_logger(name: str = "bot") -> logging.Logger:
 
     # Не распространять логи на родительские логгеры
     logger.propagate = False
+
+    # Применить фильтр для маскирования секретов (API keys, tokens, passwords)
+    apply_secret_filter_to_logger(logger)
+
+    # Отключить verbose логирование httpx (может логировать Authorization headers)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    # Отключить verbose логирование hpack (HTTP/2 headers)
+    logging.getLogger("hpack").setLevel(logging.WARNING)
 
     return logger
 

@@ -608,7 +608,7 @@ async def process_tz_manual(message: Message, state: FSMContext):
 # ПОДТВЕРЖДЕНИЕ ДАННЫХ
 # =============================================================================
 
-async def show_confirmation(message: Message, state: FSMContext):
+async def show_confirmation(message: Message, state: FSMContext) -> None:
     """Показывает подтверждение всех введённых данных."""
     data = await state.get_data()
 

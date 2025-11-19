@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     OPENROUTER_TIMEOUT: int = 30
     AI_PROMPT_VERSION: str = "v1.0"
 
+    # OpenRouter Retry Configuration
+    OPENROUTER_RETRY_ATTEMPTS: int = 3  # Количество попыток при ошибке
+    OPENROUTER_RETRY_MIN_WAIT: int = 2  # Минимальная задержка между попытками (сек)
+    OPENROUTER_RETRY_MAX_WAIT: int = 10  # Максимальная задержка между попытками (сек)
+    OPENROUTER_RETRY_MULTIPLIER: int = 2  # Множитель для exponential backoff
+
     # Feature Flags
     FEATURE_PERSONAL_PLAN: str = "off"
     DEBUG_MODE: bool = False

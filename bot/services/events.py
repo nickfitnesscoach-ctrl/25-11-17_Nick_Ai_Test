@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 from bot.utils.logger import logger
+from bot.utils.pii_masking import mask_user_id, mask_payload
 
 
 class EventLogger:
@@ -23,21 +24,34 @@ class EventLogger:
         payload: Optional[Dict[str, Any]] = None
     ) -> None:
         """
-        Логирует событие пользователя.
+        Логирует событие пользователя с маскированием PII данных.
 
         Args:
-            user_id: ID пользователя
+            user_id: ID пользователя (будет хеширован для логов)
             event: Название события (например, "survey_started")
-            payload: Дополнительные данные
+            payload: Дополнительные данные (PII данные будут замаскированы)
+
+        Note:
+            Для соответствия GDPR/CCPA:
+            - user_id хешируется (SHA256, первые 8 символов)
+            - Персональные данные (age, weight, height, tz) маскируются
+            - Не-PII данные (gender, activity) остаются без изменений
         """
+        # Маскирование user_id для защиты личности
+        masked_user_id = mask_user_id(user_id)
+
+        # Маскирование PII в payload
+        masked_payload = mask_payload(payload) if payload else {}
+
         log_data = {
-            "user_id": user_id,
+            "user_id": masked_user_id,
             "event": event,
             "timestamp": datetime.now().isoformat(),
-            "payload": payload or {}
+            "payload": masked_payload
         }
 
-        logger.info(f"EVENT: {event} | User: {user_id} | Data: {payload}")
+        # Логирование с замаскированными данными
+        logger.info(f"EVENT: {event} | User: {masked_user_id} | Data: {masked_payload}")
 
         # TODO: В будущем - запись в таблицу events:
         # async with async_session() as session:

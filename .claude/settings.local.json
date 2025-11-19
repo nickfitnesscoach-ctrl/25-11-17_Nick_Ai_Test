@@ -47,7 +47,13 @@
       "Bash(pytest:*)",
       "Bash(test_results.txt)",
       "Bash(./venv/Scripts/alembic.exe revision:*)",
-      "Bash(./venv/Scripts/pytest.exe tests/test_critical_bugs.py -v)"
+      "Bash(./venv/Scripts/pytest.exe tests/test_critical_bugs.py -v)",
+      "Bash(python:*)",
+      "Bash(./venv/Scripts/pytest.exe tests/test_retry_logic.py -v)",
+      "Bash(./venv/Scripts/pytest.exe tests/test_pii_masking.py -v)",
+      "Bash(./venv/Scripts/pytest.exe tests/ -v --tb=short)",
+      "Bash(./venv/Scripts/pytest.exe tests/test_secret_filter.py -v)",
+      "Bash(./venv/Scripts/pytest.exe tests/ -v --tb=line)"
     ],
     "deny": [],
     "ask": []
