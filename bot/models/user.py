@@ -24,8 +24,8 @@ class User(Base, TimestampMixin):
     utc_offset_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     # Relationships
-    # survey_answers: Mapped[List["SurveyAnswer"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    # plans: Mapped[List["Plan"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    survey_answers: Mapped[List["SurveyAnswer"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    plans: Mapped[List["Plan"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, tg_id={self.tg_id}, username={self.username})>"

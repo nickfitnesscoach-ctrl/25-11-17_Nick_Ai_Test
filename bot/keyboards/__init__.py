@@ -10,7 +10,7 @@ from .survey import (
     get_timezone_keyboard,
     get_target_weight_keyboard,
     get_confirmation_keyboard,
-    get_back_cancel_keyboard,
+    get_empty_keyboard,
     get_start_survey_keyboard,
     get_contact_trainer_keyboard,
 )
@@ -23,7 +23,7 @@ __all__ = [
     "get_timezone_keyboard",
     "get_target_weight_keyboard",
     "get_confirmation_keyboard",
-    "get_back_cancel_keyboard",
+    "get_empty_keyboard",
     "get_start_survey_keyboard",
     "get_contact_trainer_keyboard",
 ]

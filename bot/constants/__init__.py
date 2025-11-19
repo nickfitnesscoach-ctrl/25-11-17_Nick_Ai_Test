@@ -10,8 +10,6 @@ from .survey import (
     POPULAR_TIMEZONES,
     UTC_TO_IANA_MAPPING,
     VALIDATION_LIMITS,
-    TOTAL_STEPS,
-    STEP_NAMES,
 )
 
 __all__ = [
@@ -22,6 +20,4 @@ __all__ = [
     "POPULAR_TIMEZONES",
     "UTC_TO_IANA_MAPPING",
     "VALIDATION_LIMITS",
-    "TOTAL_STEPS",
-    "STEP_NAMES",
 ]

@@ -43,7 +43,11 @@
       "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"cd /root/bots/25-11-17_Nick_Ai_Test && git pull && docker compose up -d --build bot\")",
       "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"cd /root/bots/calorie_bot && git pull && docker compose up -d --build bot\")",
       "Bash(ssh -o StrictHostKeyChecking=no root@85.198.81.133 \"docker compose -f /root/bots/calorie_bot/docker-compose.yml logs --tail=30 bot\")",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(pytest:*)",
+      "Bash(test_results.txt)",
+      "Bash(./venv/Scripts/alembic.exe revision:*)",
+      "Bash(./venv/Scripts/pytest.exe tests/test_critical_bugs.py -v)"
     ],
     "deny": [],
     "ask": []

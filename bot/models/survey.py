@@ -4,7 +4,7 @@
 
 from sqlalchemy import BigInteger, String, Integer, Numeric, Text, ForeignKey, CheckConstraint, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 from .base import Base
@@ -49,8 +49,8 @@ class SurveyAnswer(Base):
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default="now()", nullable=False)
 
     # Relationships
-    # user: Mapped["User"] = relationship(back_populates="survey_answers")
-    # plans: Mapped[List["Plan"]] = relationship(back_populates="survey_answer")
+    user: Mapped["User"] = relationship(back_populates="survey_answers")
+    plans: Mapped[List["Plan"]] = relationship(back_populates="survey_answer")
 
     __table_args__ = (
         CheckConstraint("gender IN ('male', 'female')", name="check_gender"),
@@ -103,8 +103,8 @@ class Plan(Base):
     )
 
     # Relationships
-    # user: Mapped["User"] = relationship(back_populates="plans")
-    # survey_answer: Mapped[Optional["SurveyAnswer"]] = relationship(back_populates="plans")
+    user: Mapped["User"] = relationship(back_populates="plans")
+    survey_answer: Mapped[Optional["SurveyAnswer"]] = relationship(back_populates="plans")
 
     def __repr__(self) -> str:
         return f"<Plan(id={self.id}, user_id={self.user_id}, model={self.ai_model})>"

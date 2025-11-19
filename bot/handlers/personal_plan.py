@@ -162,7 +162,7 @@ async def process_gender(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     sent_msg = await callback.message.answer(
         AGE_QUESTION,
-        reply_markup=get_back_cancel_keyboard(),
+        reply_markup=get_empty_keyboard(),
         parse_mode="HTML",
         disable_notification=True
     )
@@ -204,7 +204,7 @@ async def process_age(message: Message, state: FSMContext):
     await state.set_state(SurveyStates.HEIGHT)
     sent_msg = await message.answer(
         AGE_CONFIRMED.format(age=age) + "\n\n" + HEIGHT_QUESTION,
-        reply_markup=get_back_cancel_keyboard(),
+        reply_markup=get_empty_keyboard(),
         parse_mode="HTML",
         disable_notification=True
     )
@@ -245,7 +245,7 @@ async def process_height(message: Message, state: FSMContext):
     await state.set_state(SurveyStates.WEIGHT)
     sent_msg = await message.answer(
         HEIGHT_CONFIRMED.format(height=height) + "\n\n" + WEIGHT_QUESTION,
-        reply_markup=get_back_cancel_keyboard(),
+        reply_markup=get_empty_keyboard(),
         parse_mode="HTML",
         disable_notification=True
     )
@@ -303,34 +303,7 @@ async def process_target_weight_text(message: Message, state: FSMContext):
     data = await state.get_data()
     current_weight = data.get("weight_kg")
 
-    # Сначала проверяем, является ли введенное значение валидным числом
-    from bot.validators import validate_weight
-    parsed_weight = validate_weight(message.text)
-
-    if parsed_weight is None:
-        # Не является валидным числом
-        # Удалить сообщение пользователя с некорректным вводом
-        try:
-            await message.delete()
-        except Exception:
-            pass
-        error_msg = await message.answer(TARGET_WEIGHT_INVALID, parse_mode="HTML", disable_notification=True)
-        await state.update_data(last_bot_message_id=error_msg.message_id)
-        return
-
-    # Проверяем, совпадает ли с текущим весом
-    if abs(parsed_weight - current_weight) < 0.1:
-        # Целевой вес совпадает с текущим
-        # Удалить сообщение пользователя с некорректным вводом
-        try:
-            await message.delete()
-        except Exception:
-            pass
-        error_msg = await message.answer(TARGET_WEIGHT_SAME_AS_CURRENT, parse_mode="HTML", disable_notification=True)
-        await state.update_data(last_bot_message_id=error_msg.message_id)
-        return
-
-    # Все проверки пройдены
+    # Валидация целевого веса (включает проверку числа и отличия от текущего)
     target_weight = validate_target_weight(message.text, current_weight)
 
     if target_weight is None:

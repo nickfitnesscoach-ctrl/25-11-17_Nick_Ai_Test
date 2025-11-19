@@ -181,16 +181,4 @@ VALIDATION_LIMITS = {
 # ПРОГРЕСС ОПРОСА
 # =============================================================================
 
-TOTAL_STEPS = 9  # Общее количество шагов опроса
-
-STEP_NAMES = {
-    1: "GENDER",
-    2: "AGE",
-    3: "HEIGHT",
-    4: "WEIGHT",
-    5: "TARGET_WEIGHT",
-    6: "ACTIVITY",
-    7: "BODY_NOW",
-    8: "BODY_IDEAL",
-    9: "TZ",
-}
+# Раньше здесь были TOTAL_STEPS и STEP_NAMES - удалены как unused (BUG-2025-033)

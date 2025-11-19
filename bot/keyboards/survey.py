@@ -105,8 +105,8 @@ def get_confirmation_keyboard() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def get_back_cancel_keyboard() -> InlineKeyboardMarkup:
-    """Пустая клавиатура (без кнопок навигации)."""
+def get_empty_keyboard() -> InlineKeyboardMarkup:
+    """Пустая клавиатура (без кнопок)."""
     builder = InlineKeyboardBuilder()
     return builder.as_markup()
 
