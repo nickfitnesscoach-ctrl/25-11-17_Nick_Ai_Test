@@ -1,9 +1,39 @@
 # Bugs & Tech Debt — FoodMind Bot
 
 **Generated:** 2025-11-17
-**Last Updated:** 2025-11-17
+**Last Updated:** 2025-11-19
 **Project:** AI Lead Magnet Bot (Telegram Bot for Personal Nutrition Plans)
 **Framework:** aiogram 3.x, SQLAlchemy async, PostgreSQL, OpenRouter AI
+
+---
+
+## 📊 Общий прогресс: 53% (18/34 задач)
+
+### Статус по приоритетам:
+- ✅ **P1 (Critical):** 5/5 FIXED (100%) - Production-ready
+- ✅ **P2 (High):** 6/10 FIXED (60%) - В процессе
+- 🔴 **P3 (Medium):** 5/14 FIXED (36%) - В процессе
+- 🔴 **P4 (Low):** 2/5 FIXED (40%) - Частично
+
+### Последние изменения (2025-11-19):
+**Коммит 079e323** - Fix high priority bugs (P2): 6 багов
+- ✅ BUG-2025-010: Trainer username в конфиг
+- ✅ BUG-2025-011: Rate limiting (защита от abuse)
+- ✅ BUG-2025-012: HTTP-Referer в конфиг
+- ✅ BUG-2025-013: Улучшенная валидация AI
+- ✅ BUG-2025-014: Обработка ошибок Telegram API
+- ✅ BUG-2025-015: Проверка изображений на старте
+
+**Коммит 2e15c5e** - Fix P3 bugs: 5 багов
+- ✅ BUG-2025-021: Рефакторинг удаления сообщений
+- ✅ BUG-2025-022: SQLAlchemy relationships
+- ✅ BUG-2025-023: Индекс на created_at
+- ✅ BUG-2025-025: Упрощение валидации
+- ✅ BUG-2025-033, 034: Dead code cleanup
+
+### Следующие шаги:
+1. **Приоритет:** Завершить оставшиеся P2 баги (4 задачи)
+2. **Затем:** P3 архитектурные улучшения
 
 ---
 
@@ -414,12 +444,14 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
 
 ## 2. Высокий приоритет (P2)
 
-### BUG-2025-010: Хардкод trainer username в клавиатуре
+### BUG-2025-010: Хардкод trainer username в клавиатуре ✅ FIXED
 
 - **Severity:** P2
 - **Tags:** HARDCODE, CONFIG
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
   - `bot/keyboards/survey.py:136` (get_contact_trainer_keyboard)
+  - `bot/config.py` (TRAINER_USERNAME)
 
 **Описание:**
 Username тренера хардкодится прямо в коде: `url = "https://t.me/NicolasBatalin"`. При смене тренера или использовании бота в разных проектах нужно менять код.
@@ -427,7 +459,7 @@ Username тренера хардкодится прямо в коде: `url = "h
 **Expected:**
 Username тренера должен быть в `.env` и `config.py`.
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
 # config.py
 TRAINER_USERNAME: str = "NicolasBatalin"
@@ -438,12 +470,15 @@ url = f"https://t.me/{settings.TRAINER_USERNAME}"
 
 ---
 
-### BUG-2025-011: Отсутствие rate limiting на генерацию планов
+### BUG-2025-011: Отсутствие rate limiting на генерацию планов ✅ FIXED
 
 - **Severity:** P2
 - **Tags:** SECURITY, ABUSE
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
   - `bot/handlers/personal_plan.py:609` (confirm_and_generate)
+  - `bot/services/database/repository.py:154-174` (count_plans_today)
+  - `bot/config.py` (MAX_PLANS_PER_DAY)
 
 **Описание:**
 Нет защиты от abuse — пользователь может запросить генерацию плана 100 раз подряд, потратив деньги на OpenRouter API.
@@ -457,41 +492,56 @@ url = f"https://t.me/{settings.TRAINER_USERNAME}"
 **Expected:**
 Лимит на генерацию планов (например, 3 плана в день на пользователя).
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
-# bot/handlers/personal_plan.py:609
-@router.callback_query(F.data == "confirm:yes", SurveyStates.CONFIRM)
-async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    user_id = callback.from_user.id
+# bot/config.py
+MAX_PLANS_PER_DAY: int = 3
 
-    # Проверка rate limit
+# bot/services/database/repository.py:154-174
+@staticmethod
+async def count_plans_today(session: AsyncSession, user_id: int) -> int:
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    result = await session.execute(
+        select(func.count(Plan.id))
+        .where(Plan.user_id == user_id)
+        .where(Plan.created_at >= today_start)
+    )
+    return result.scalar_one()
+
+# bot/handlers/personal_plan.py:609
+# Rate limit check with fail-open design
+try:
     async with async_session_maker() as session:
         plans_today = await PlanRepository.count_plans_today(session, user_id)
-        if plans_today >= 3:
-            await callback.message.answer(
-                "⚠️ Вы уже сгенерировали 3 плана сегодня. Попробуйте завтра.",
-                parse_mode="HTML"
-            )
-            await state.clear()
+        if plans_today >= settings.MAX_PLANS_PER_DAY:
+            await callback.message.answer(...)
             return
+except Exception as e:
+    logger.error(f"Rate limit check failed: {e}")
+    # Fail-open: allow generation if check fails
 ```
 
-**Tests:**
-- Unit test с 4 попытками генерации в течение 24 часов
+**Fix Details:**
+- Added configurable MAX_PLANS_PER_DAY setting (default: 3)
+- Implemented count_plans_today() repository method
+- Fail-open design: if DB check fails, allows generation (logged)
+- User-friendly error message when limit exceeded
 
 ---
 
-### BUG-2025-012: HTTP-Referer хардкод в OpenRouter запросе
+### BUG-2025-012: HTTP-Referer хардкод в OpenRouter запросе ✅ FIXED
 
 - **Severity:** P2
 - **Tags:** HARDCODE, CONFIG
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
   - `bot/services/ai/openrouter.py:64`
+  - `bot/config.py` (PROJECT_URL)
 
 **Описание:**
 В заголовке запроса к OpenRouter API указан хардкод URL: `"HTTP-Referer": "https://github.com/your-repo"`. Это должно быть в конфигурации.
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
 # config.py
 PROJECT_URL: str = "https://github.com/your-username/ai-lead-magnet-bot"
@@ -502,12 +552,13 @@ PROJECT_URL: str = "https://github.com/your-username/ai-lead-magnet-bot"
 
 ---
 
-### BUG-2025-013: Валидация AI response может пропустить некорректные ответы
+### BUG-2025-013: Валидация AI response может пропустить некорректные ответы ✅ FIXED
 
 - **Severity:** P2
 - **Tags:** BUG, VALIDATION
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/validators/ai_response.py:9-47` (validate_ai_response)
+  - `bot/validators/ai_response.py:9-69` (validate_ai_response)
 
 **Описание:**
 Валидация проверяет наличие ключевых слов, но НЕ проверяет:
@@ -521,33 +572,52 @@ PROJECT_URL: str = "https://github.com/your-username/ai-lead-magnet-bot"
 - HTML валидация
 - Проверка на запрещённые слова
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
-# bot/validators/ai_response.py:19
-def validate_ai_response(text: str) -> Dict[str, any]:
+# bot/validators/ai_response.py:9-69
+from typing import Dict, List, Any  # Fixed type hint
+
+def validate_ai_response(text: str) -> Dict[str, Any]:
     errors: List[str] = []
 
-    # 1. Проверка длины
-    if len(text) > 4000:  # Telegram limit 4096, но с запасом
-        errors.append(f"Ответ слишком длинный: {len(text)} символов (лимит 4000)")
+    # 0. Проверка длины ответа (Telegram limit 4096, делаем запас)
+    MAX_LENGTH = 4000
+    if len(text) > MAX_LENGTH:
+        errors.append(f"Ответ слишком длинный: {len(text)} символов (лимит {MAX_LENGTH})")
 
-    # 2. Проверка на запрещённые слова
-    forbidden_words = ["добавк", "препарат", "лекарств", "витамин"]
+    # 0.1. Проверка минимальной длины
+    MIN_LENGTH = 200
+    if len(text) < MIN_LENGTH:
+        errors.append(f"Ответ слишком короткий: {len(text)} символов (минимум {MIN_LENGTH})")
+
+    # 0.2. Проверка на запрещённые слова (добавки, препараты)
+    forbidden_words = ["добавк", "препарат", "лекарств", "витамин", "бад"]
+    found_forbidden = []
     for word in forbidden_words:
         if word in text.lower():
-            errors.append(f"Обнаружено запрещённое слово: {word}")
+            found_forbidden.append(word)
+    if found_forbidden:
+        errors.append(f"Обнаружены запрещённые слова: {', '.join(found_forbidden)}")
 
-    # ... rest of checks
+    # ... rest of checks (calories, disclaimer, etc.)
 ```
+
+**Fix Details:**
+- Added length validation (min 200, max 4000 chars)
+- Added forbidden words check (добавки, препараты, БАДы, витамины)
+- Fixed type hint: Dict[str, any] → Dict[str, Any]
+- Prevents sending invalid/dangerous AI responses to users
 
 ---
 
-### BUG-2025-014: Недостаточная обработка ошибок при удалении сообщений
+### BUG-2025-014: Недостаточная обработка ошибок при удалении сообщений ✅ FIXED
 
 - **Severity:** P2
 - **Tags:** BUG, RUNTIME
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/handlers/personal_plan.py:136-144` (process_age, process_height, process_weight и др.)
+  - `bot/handlers/personal_plan.py:52-76` (_safe_delete_message helper)
+  - Multiple locations where message deletion occurs
 
 **Описание:**
 При удалении предыдущих сообщений бота используется голый `try-except: pass`, что скрывает реальные ошибки. Например, если Telegram API вернёт `MessageToDeleteNotFound`, это нормально, но если вернёт `BotBlocked` или `ChatNotFound`, это критичная ситуация.
@@ -555,31 +625,49 @@ def validate_ai_response(text: str) -> Dict[str, any]:
 **Expected:**
 Логировать конкретные исключения и обрабатывать критичные случаи.
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
-# bot/handlers/personal_plan.py:136
-try:
-    if last_msg_id:
-        await message.bot.delete_message(chat_id=message.chat.id, message_id=last_msg_id)
-except TelegramBadRequest as e:
-    if "message to delete not found" in str(e).lower():
-        logger.debug(f"Message {last_msg_id} already deleted")
-    else:
-        logger.warning(f"Failed to delete message {last_msg_id}: {e}")
-except TelegramForbiddenError:
-    logger.error(f"Bot blocked by user {message.from_user.id}")
-    await state.clear()
-    return
+# bot/handlers/personal_plan.py:52-76
+async def _safe_delete_message(bot: Bot, chat_id: int, message_id: int) -> None:
+    """
+    Безопасно удаляет сообщение с подробным логированием ошибок.
+
+    Args:
+        bot: Bot instance
+        chat_id: ID чата
+        message_id: ID сообщения для удаления
+    """
+    from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except TelegramBadRequest as e:
+        if "message to delete not found" in str(e).lower():
+            logger.debug(f"Message {message_id} already deleted")
+        else:
+            logger.warning(f"Failed to delete message {message_id}: {e}")
+    except TelegramForbiddenError as e:
+        logger.error(f"Bot blocked by user in chat {chat_id}: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error deleting message {message_id}: {e}")
 ```
+
+**Fix Details:**
+- Created _safe_delete_message() helper function
+- Handles TelegramBadRequest, TelegramForbiddenError separately
+- Logs specific errors instead of silent try-except pass
+- Detects bot blocks and logs critical events
+- Applied to all message deletion points in handlers
 
 ---
 
-### BUG-2025-015: Отсутствие проверки существования изображений на старте бота
+### BUG-2025-015: Отсутствие проверки существования изображений на старте бота ✅ FIXED
 
 - **Severity:** P2
 - **Tags:** BUG, CONFIG
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/__main__.py:19-27` (on_startup)
+  - `bot/__main__.py:26-42` (on_startup image validation)
 
 **Описание:**
 Бот запускается БЕЗ проверки наличия критичных файлов в `assets/body_types/`. Если изображения отсутствуют, пользователь узнает об этом только при прохождении опроса до шага BODY_NOW → fallback сообщения.
@@ -587,13 +675,13 @@ except TelegramForbiddenError:
 **Expected:**
 Проверка на старте бота + warning в логах, если файлы отсутствуют.
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
-# bot/__main__.py:27
+# bot/__main__.py:26-42
 async def on_startup():
     logger.info("[START] Starting bot...")
 
-    # Проверка наличия изображений
+    # Проверка наличия изображений body types
     from bot.utils.paths import validate_image_file_exists
     from bot.constants import BODY_COUNTS
 
@@ -607,7 +695,16 @@ async def on_startup():
 
     if missing_images:
         logger.warning(f"[!] Missing body type images: {', '.join(missing_images)}")
+        logger.warning("[!] Users will see fallback messages for missing images")
+    else:
+        logger.info("[OK] All body type images found")
 ```
+
+**Fix Details:**
+- Added startup check for body type images
+- Validates all required images (male/female, now/ideal)
+- Logs warning with missing image paths
+- Non-blocking: bot continues if images missing (fallback messages work)
 
 ---
 
@@ -635,71 +732,88 @@ async def on_startup():
 
 ---
 
-### BUG-2025-021: Дублирование логики удаления сообщений
+### BUG-2025-021: Дублирование логики удаления сообщений ✅ FIXED
 
 - **Severity:** P3
 - **Tags:** DUPLICATION
+- **Status:** ✅ FIXED (2025-11-19) - Fixed in P2 work
 - **Files:**
-  - `bot/handlers/personal_plan.py:136-144` (process_age)
-  - `bot/handlers/personal_plan.py:183-191` (process_height)
-  - `bot/handlers/personal_plan.py:230-238` (process_weight)
-  - И ещё ~10 мест
+  - `bot/handlers/personal_plan.py:52-76` (_safe_delete_message helper)
+  - Multiple handler locations updated
 
 **Описание:**
 Блок удаления предыдущего сообщения бота дублируется в 10+ хендлерах. Нарушение DRY.
 
-**Proposed Fix:**
-```python
-# bot/handlers/personal_plan.py (новая функция)
-async def delete_last_bot_message(state: FSMContext, bot: Bot, chat_id: int) -> None:
-    data = await state.get_data()
-    last_msg_id = data.get("last_bot_message_id")
-    if not last_msg_id:
-        return
-
-    try:
-        await bot.delete_message(chat_id=chat_id, message_id=last_msg_id)
-    except Exception as e:
-        logger.debug(f"Failed to delete message {last_msg_id}: {e}")
-
-# Использование:
-await delete_last_bot_message(state, message.bot, message.chat.id)
-```
+**Fix Applied:**
+See BUG-2025-014 for implementation details. This was addressed as part of P2 error handling improvements.
 
 ---
 
-### BUG-2025-022: Relationships в моделях закомментированы
+### BUG-2025-022: Relationships в моделях закомментированы ✅ FIXED
 
 - **Severity:** P3
 - **Tags:** ARCH, DB
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/models/user.py:27-28`
-  - `bot/models/survey.py:52-53`
-  - `bot/models/survey.py:106-107`
+  - `bot/models/user.py:27-28` (relationships uncommented)
+  - `bot/models/survey.py:52-53` (SurveyAnswer relationships)
+  - `bot/models/survey.py:106-107` (Plan relationships)
 
-**Описание:**
-Все ORM relationships закомментированы. Это затрудняет написание JOIN-запросов и использование lazy/eager loading.
+**Fix Applied:**
+```python
+# bot/models/user.py:27-28
+survey_answers: Mapped[List["SurveyAnswer"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+plans: Mapped[List["Plan"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
-**Expected:**
-Раскомментировать relationships или документировать причину их отсутствия.
+# bot/models/survey.py:52-53
+user: Mapped["User"] = relationship(back_populates="survey_answers")
+plans: Mapped[List["Plan"]] = relationship(back_populates="survey_answer")
+
+# bot/models/survey.py:106-107
+user: Mapped["User"] = relationship(back_populates="plans")
+survey_answer: Mapped[Optional["SurveyAnswer"]] = relationship(back_populates="plans")
+```
+
+**Fix Details:**
+- Enabled ORM relationships in all models (User, SurveyAnswer, Plan)
+- Added missing `List` import in survey.py
+- Allows for JOIN queries and lazy/eager loading
+- Tested: Models import successfully with relationships
 
 ---
 
-### BUG-2025-023: Отсутствие индекса на survey_answers.created_at
+### BUG-2025-023: Отсутствие индекса на survey_answers.created_at ✅ FIXED
 
 - **Severity:** P3
 - **Tags:** DB, PERFORMANCE
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `alembic/versions/6aa0ade7a7c0_create_survey_tables.py:58`
+  - `alembic/versions/46e97e78aed0_add_index_survey_answers_created_at.py` (new migration)
 
 **Описание:**
 В таблице `survey_answers` есть индекс на `completed_at`, но нет на `created_at`. Если нужно будет делать аналитику по времени начала опроса, запросы будут медленными.
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
-# alembic migration (новая)
-op.create_index('ix_survey_answers_created_at', 'survey_answers', ['created_at'])
+# alembic/versions/46e97e78aed0_*.py
+def upgrade() -> None:
+    """Добавляет индекс на survey_answers.created_at для аналитики времени начала опроса."""
+    op.create_index(
+        'ix_survey_answers_created_at',
+        'survey_answers',
+        ['created_at']
+    )
+
+def downgrade() -> None:
+    """Удаляет индекс survey_answers.created_at."""
+    op.drop_index('ix_survey_answers_created_at', 'survey_answers')
 ```
+
+**Fix Details:**
+- Created new Alembic migration: 46e97e78aed0
+- Added ix_survey_answers_created_at index for analytics
+- Improves query performance for survey start time analysis
+- Migration includes proper upgrade/downgrade functions
 
 ---
 
@@ -715,15 +829,39 @@ op.create_index('ix_survey_answers_created_at', 'survey_answers', ['created_at']
 
 ---
 
-### BUG-2025-025: Дублирование блоков валидации в process_target_weight_text
+### BUG-2025-025: Дублирование блоков валидации в process_target_weight_text ✅ FIXED
 
 - **Severity:** P3
 - **Tags:** DUPLICATION
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/handlers/personal_plan.py:256-299`
+  - `bot/handlers/personal_plan.py:301-317` (simplified from 45 to 17 lines)
 
-**Описание:**
-В `process_target_weight_text` вызывается `validate_weight()` дважды: один раз для проверки числа, второй раз через `validate_target_weight()`. Можно объединить.
+**Fix Applied:**
+```python
+# bot/handlers/personal_plan.py:301-317
+async def process_target_weight_text(message: Message, state: FSMContext):
+    """Обработка ввода целевого веса."""
+    data = await state.get_data()
+    current_weight = data.get("weight_kg")
+
+    # Валидация целевого веса (включает проверку числа и отличия от текущего)
+    target_weight = validate_target_weight(message.text, current_weight)
+
+    if target_weight is None:
+        # Delete invalid input and show error
+        ...
+        return
+
+    # Save and continue to next step
+    ...
+```
+
+**Fix Details:**
+- Simplified validation logic from 45 lines to 17 lines (-62%)
+- Removed redundant validate_weight() calls
+- validate_target_weight() already includes all necessary checks
+- Reduces code duplication and potential for bugs
 
 ---
 
@@ -770,30 +908,47 @@ def validate_ai_response(text: str) -> Dict[str, Any]:
 
 ---
 
-### BUG-2025-033: Unused constants в survey.py
+### BUG-2025-033: Unused constants в survey.py ✅ FIXED
 
 - **Severity:** P4
 - **Tags:** DEAD_CODE
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/constants/survey.py:183-184` (TOTAL_STEPS, STEP_NAMES)
+  - `bot/constants/survey.py` (removed TOTAL_STEPS, STEP_NAMES)
+  - `bot/constants/__init__.py` (updated exports)
 
-**Описание:**
-Константы `TOTAL_STEPS` и `STEP_NAMES` определены, но НИГДЕ не используются в коде.
+**Fix Applied:**
+- Deleted TOTAL_STEPS and STEP_NAMES from constants/survey.py
+- Removed from constants/__init__.py exports
+- Added comment explaining removal for future reference
+- Verified no usage in codebase via grep
 
 ---
 
-### BUG-2025-034: Пустая функция get_back_cancel_keyboard()
+### BUG-2025-034: Пустая функция get_back_cancel_keyboard() ✅ FIXED
 
 - **Severity:** P4
 - **Tags:** DEAD_CODE
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/keyboards/survey.py:107-110`
+  - `bot/keyboards/survey.py:108-111` (renamed to get_empty_keyboard)
+  - `bot/keyboards/__init__.py` (updated exports)
+  - `bot/handlers/personal_plan.py` (3 usage locations updated)
 
-**Описание:**
-Функция `get_back_cancel_keyboard()` возвращает пустой keyboard, но название говорит о "back" и "cancel" кнопках. Вероятно, это заглушка.
+**Fix Applied:**
+```python
+# bot/keyboards/survey.py:108-111
+def get_empty_keyboard() -> InlineKeyboardMarkup:
+    """Пустая клавиатура (без кнопок)."""
+    builder = InlineKeyboardBuilder()
+    return builder.as_markup()
+```
 
-**Proposed Fix:**
-Удалить функцию или переименовать в `get_empty_keyboard()`.
+**Fix Details:**
+- Renamed get_back_cancel_keyboard() to get_empty_keyboard()
+- Updated all imports and usage (3 locations in personal_plan.py)
+- New name accurately reflects function purpose (empty keyboard, not back/cancel)
+- Tested: Import successful, all tests pass
 
 ---
 
@@ -1025,80 +1180,62 @@ class SurveyService:
 
 ## Fix Roadmap
 
-### Этап 1: Критичные баги (P1) — Стабилизация [1-2 дня]
+### Этап 1: Критичные баги (P1) — Стабилизация ✅ COMPLETED
 
-**Цель:** Устранить все потенциальные крэши и потери данных.
+**Статус:** ✅ **5/5 FIXED (100%)** - Завершено 2025-11-17
 
-1. **BUG-2025-001: Валидация callback_data**
-   - Файлы: `bot/handlers/personal_plan.py` (5 хендлеров)
-   - Тесты: `tests/test_handlers.py::test_invalid_callback_data`
-   - Риски: None (только добавление проверок)
+1. ✅ **BUG-2025-001: Валидация callback_data** - FIXED
+2. ✅ **BUG-2025-002: AttributeError при отсутствии from_user** - FIXED
+3. ✅ **BUG-2025-003: DB exception handling при сохранении плана** - FIXED
+4. ✅ **BUG-2025-004: Промежуточные уведомления при генерации AI** - FIXED
+5. ✅ **BUG-2025-005: Race condition на подтверждении** - FIXED
 
-2. **BUG-2025-002: AttributeError при отсутствии from_user**
-   - Файлы: `bot/handlers/personal_plan.py:688`
-   - Тесты: Mock test с `from_user=None`
-   - Риски: None
-
-3. **BUG-2025-003: DB exception handling при сохранении плана**
-   - Файлы: `bot/handlers/personal_plan.py:683-708`
-   - Тесты: Mock test с DB failure
-   - Риски: Нужно продумать fallback-storage (файл или Redis)
-
-4. **BUG-2025-004: Промежуточные уведомления при генерации AI**
-   - Файлы: `bot/handlers/personal_plan.py:660`
-   - Тесты: Manual testing с медленным AI
-   - Риски: None
-
-5. **BUG-2025-005: Race condition на подтверждении**
-   - Файлы: `bot/handlers/personal_plan.py:609`
-   - Тесты: Параллельные вызовы
-   - Риски: None
-
-**Проверка:** Прогнать все P1 тесты, мануальное тестирование end-to-end опроса 5+ раз.
+**Тестирование:** 12/12 тестов passing в `tests/test_critical_bugs.py`
 
 ---
 
-### Этап 2: Безопасность и конфигурация (P2) [1 день]
+### Этап 2: Безопасность и конфигурация (P2) — 60% COMPLETED
 
-**Цель:** Защита от abuse, утечек API keys, хардкода.
+**Статус:** ✅ **6/10 FIXED (60%)** - Частично завершено 2025-11-19
 
-1. **BUG-2025-010: Trainer username в конфиг**
-2. **BUG-2025-011: Rate limiting на генерацию планов**
-   - Добавить таблицу или Redis counter
-3. **BUG-2025-012: HTTP-Referer в конфиг**
-4. **BUG-2025-015: Проверка изображений на старте**
-5. **BUG-2025-060: Маскировка PII в логах**
-6. **BUG-2025-062: Отключить логирование API keys**
+✅ **Выполнено:**
+1. ✅ **BUG-2025-010: Trainer username в конфиг** - FIXED
+2. ✅ **BUG-2025-011: Rate limiting на генерацию планов** - FIXED
+3. ✅ **BUG-2025-012: HTTP-Referer в конфиг** - FIXED
+4. ✅ **BUG-2025-013: Улучшенная валидация AI** - FIXED
+5. ✅ **BUG-2025-014: Обработка ошибок Telegram API** - FIXED
+6. ✅ **BUG-2025-015: Проверка изображений на старте** - FIXED
 
-**Проверка:** Попытка abuse (10+ планов за минуту), проверка логов на PII.
-
----
-
-### Этап 3: Интеграции и ретраи (P2) [1 день]
-
-**Цель:** Сделать интеграции более надёжными.
-
-1. **BUG-2025-050: Retry логика для OpenRouter**
-   - Добавить `tenacity`
-2. **BUG-2025-013: Улучшенная валидация AI ответа**
-3. **BUG-2025-014: Детальная обработка ошибок Telegram API**
-
-**Проверка:** Mock тесты с 503/429 от OpenRouter, проверка ретраев.
+🔴 **Осталось:**
+- BUG-2025-050: Retry логика для OpenRouter
+- BUG-2025-060: Маскировка PII в логах
+- BUG-2025-062: Отключить логирование API keys
+- BUG-2025-040: HTTP-клиент timeout хардкод
+- BUG-2025-041: CORS/Origin в OpenRouter request
 
 ---
 
-### Этап 4: Рефакторинг архитектуры (P3) [2-3 дня]
+### Этап 3: Рефакторинг архитектуры (P3) — 36% COMPLETED
 
-**Цель:** Улучшить поддерживаемость, уменьшить дублирование.
+**Статус:** ✅ **5/14 FIXED (36%)** - Частично завершено 2025-11-19
 
-1. **BUG-2025-020: Разбить монолитный хендлер на модули**
-   - Создать `bot/handlers/survey/` с подмодулями
-2. **BUG-2025-021: Вынести дублирующуюся логику удаления сообщений**
-3. **BUG-2025-080: Добавить Service Layer**
-   - Создать `bot/services/survey_service.py`
-4. **BUG-2025-022: Раскомментировать relationships в моделях**
+✅ **Выполнено:**
+1. ✅ **BUG-2025-021: Вынести дублирующуюся логику удаления сообщений** - FIXED (в составе P2)
+2. ✅ **BUG-2025-022: Раскомментировать relationships в моделях** - FIXED
+3. ✅ **BUG-2025-023: Добавить индекс на survey_answers.created_at** - FIXED
+4. ✅ **BUG-2025-025: Убрать дублирование валидации** - FIXED
+5. ✅ **BUG-2025-033: Удалить unused constants** - FIXED (P4, но завершено)
+6. ✅ **BUG-2025-034: Переименовать get_empty_keyboard()** - FIXED (P4, но завершено)
 
-**Проверка:** Регресс-тестирование после рефакторинга, все старые тесты должны проходить.
+🔴 **Осталось (архитектура и документация):**
+- BUG-2025-020: Разбить монолитный хендлер на модули (856 строк)
+- BUG-2025-024: Добавить docstrings
+- BUG-2025-051: Connection pooling для БД
+- BUG-2025-080: Добавить Service Layer
+- BUG-2025-081: Middleware для логирования
+- И другие P3 задачи
+
+**Проверка:** Регресс-тестирование после рефакторинга - все 12 тестов passing.
 
 ---
 
@@ -1120,15 +1257,19 @@ class SurveyService:
 
 ---
 
-### Этап 6: Оптимизация и косметика (P3-P4) [1-2 дня]
+### Этап 4: Оптимизация и dead code (P4) — 40% COMPLETED
 
-**Цель:** Улучшить производительность, убрать dead code.
+**Статус:** ✅ **2/5 FIXED (40%)**
 
-1. **BUG-2025-023: Добавить индекс на survey_answers.created_at**
-2. **BUG-2025-033: Удалить unused constants**
-3. **BUG-2025-034: Удалить/переименовать пустую функцию get_back_cancel_keyboard()**
-4. **BUG-2025-051: Настроить connection pooling для БД**
-5. **BUG-2025-024: Добавить docstrings**
+✅ **Выполнено:**
+1. ✅ **BUG-2025-033: Удалить unused constants** - FIXED
+2. ✅ **BUG-2025-034: Переименовать get_empty_keyboard()** - FIXED
+
+🔴 **Осталось:**
+- BUG-2025-030: Fix type hint Any (cosmetic)
+- BUG-2025-031: Magic numbers в промпте
+- BUG-2025-032: Type hints в некоторых функциях
+- BUG-2025-090: Unused import
 
 ---
 
@@ -1137,10 +1278,16 @@ class SurveyService:
 **Всего найдено проблем:** 34
 
 **По приоритетам:**
-- P1 (Critical): 5 багов
-- P2 (High): 10 проблем (хардкод, безопасность, интеграции)
-- P3 (Medium): 14 проблем (архитектура, дублирование, БД)
-- P4 (Low): 5 проблем (стиль, dead code)
+- P1 (Critical): 5 багов → ✅ **5/5 FIXED (100%)**
+- P2 (High): 10 проблем → ✅ **6/10 FIXED (60%)**
+  - ✅ BUG-2025-010, 011, 012, 013, 014, 015
+  - 🔴 BUG-2025-050, 060, 062 (осталось 3 + BUG-2025-040, 041 из P2-P3)
+- P3 (Medium): 14 проблем → ✅ **5/14 FIXED (36%)**
+  - ✅ BUG-2025-021, 022, 023, 025, 033, 034 (6 из них, но 021 считался как часть P2)
+  - 🔴 BUG-2025-020, 024, 051, 080, 081 (осталось 9)
+- P4 (Low): 5 проблем → ✅ **2/5 FIXED (40%)**
+  - ✅ BUG-2025-033, 034
+  - 🔴 BUG-2025-030, 031, 032, 090 (осталось 3)
 
 **По типам:**
 - BUG (runtime): 8
@@ -1152,15 +1299,22 @@ class SurveyService:
 - DUPLICATION: 3
 - DEAD_CODE: 3
 
-**Оценка времени на фиксы:**
-- Этап 1 (P1): 1-2 дня
-- Этап 2 (P2 security): 1 день
-- Этап 3 (P2 integrations): 1 день
-- Этап 4 (P3 refactoring): 2-3 дня
-- Этап 5 (tests): 2-3 дня
-- Этап 6 (optimization): 1-2 дня
+**Прогресс фиксов:**
+- ✅ Этап 1 (P1): ЗАВЕРШЕНО - 5/5 багов (100%)
+- ✅ Этап 2 (P2 security): В ПРОЦЕССЕ - 6/10 багов (60%)
+- 🔴 Этап 3 (P3 refactoring): В ПРОЦЕССЕ - 5/14 багов (36%)
+- 🔴 Этап 4 (P4 optimization): В ПРОЦЕССЕ - 2/5 багов (40%)
+- 🔴 Этап 5 (tests): НЕ НАЧАТО - 0/2 задач
 
-**Итого:** 8-12 рабочих дней на полное устранение всех проблем.
+**Общий прогресс:** 18/34 задач завершено (53%)
+
+**Оставшееся время:**
+- Этап 2 (осталось 4 P2): ~0.5 дня
+- Этап 3 (осталось 9 P3): ~2 дня
+- Этап 4 (осталось 3 P4): ~0.5 дня
+- Этап 5 (тесты): ~2 дня
+
+**Итого осталось:** ~5 рабочих дней
 
 ---
 
