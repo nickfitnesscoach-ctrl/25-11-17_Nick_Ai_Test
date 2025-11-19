@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     FSM_STATE_TTL: int = 30  # minutes
     IMAGE_CACHE_TTL: int = 30  # days
     RATE_LIMIT_PER_MINUTE: int = 20
+    MAX_PLANS_PER_DAY: int = 3  # Максимум планов в день на пользователя
+    TRAINER_USERNAME: str = "NicolasBatalin"  # Telegram username тренера (без @)
+    PROJECT_URL: str = "https://github.com/your-username/ai-lead-magnet-bot"  # URL проекта для OpenRouter
 
     # Environment
     ENVIRONMENT: str = "development"

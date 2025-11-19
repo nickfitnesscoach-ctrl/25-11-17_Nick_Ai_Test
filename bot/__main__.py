@@ -23,6 +23,24 @@ async def on_startup():
     logger.info(f"Debug mode: {settings.DEBUG_MODE}")
     logger.info(f"Personal Plan feature: {'ENABLED' if settings.is_personal_plan_enabled else 'DISABLED'}")
 
+    # Проверка наличия изображений body types
+    from bot.utils.paths import validate_image_file_exists
+    from bot.constants import BODY_COUNTS
+
+    missing_images = []
+    for gender in ["male", "female"]:
+        for stage in ["now", "ideal"]:
+            count = BODY_COUNTS[gender][stage]
+            for variant_id in range(1, count + 1):
+                if not validate_image_file_exists(gender, stage, variant_id):
+                    missing_images.append(f"{gender}/{stage}/{variant_id}")
+
+    if missing_images:
+        logger.warning(f"[!] Missing body type images: {', '.join(missing_images)}")
+        logger.warning("[!] Users will see fallback messages for missing images")
+    else:
+        logger.info("[OK] All body type images found")
+
     # Инициализация БД (в production используйте Alembic)
     # await init_db()
 

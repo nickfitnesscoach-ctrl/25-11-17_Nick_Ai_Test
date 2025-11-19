@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.constants import ACTIVITY_LEVELS, POPULAR_TIMEZONES
+from bot.config import settings
 
 
 def get_gender_keyboard() -> InlineKeyboardMarkup:
@@ -132,8 +133,8 @@ def get_contact_trainer_keyboard(trainer_username: str = None) -> InlineKeyboard
     if trainer_username:
         url = f"https://t.me/{trainer_username}"
     else:
-        # Дефолтный username тренера
-        url = "https://t.me/NicolasBatalin"
+        # Использовать username из конфигурации
+        url = f"https://t.me/{settings.TRAINER_USERNAME}"
 
     builder.row(
         InlineKeyboardButton(text="✉️ Написать тренеру", url=url)

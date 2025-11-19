@@ -3,10 +3,10 @@
 """
 
 import re
-from typing import Dict, List
+from typing import Dict, List, Any
 
 
-def validate_ai_response(text: str) -> Dict[str, any]:
+def validate_ai_response(text: str) -> Dict[str, Any]:
     """
     Проверяет наличие обязательных элементов в ответе ИИ.
 
@@ -17,6 +17,25 @@ def validate_ai_response(text: str) -> Dict[str, any]:
         Словарь: {"valid": bool, "errors": list}
     """
     errors: List[str] = []
+
+    # 0. Проверка длины ответа (Telegram limit 4096, делаем запас)
+    MAX_LENGTH = 4000
+    if len(text) > MAX_LENGTH:
+        errors.append(f"Ответ слишком длинный: {len(text)} символов (лимит {MAX_LENGTH})")
+
+    # 0.1. Проверка минимальной длины
+    MIN_LENGTH = 200
+    if len(text) < MIN_LENGTH:
+        errors.append(f"Ответ слишком короткий: {len(text)} символов (минимум {MIN_LENGTH})")
+
+    # 0.2. Проверка на запрещённые слова (добавки, препараты)
+    forbidden_words = ["добавк", "препарат", "лекарств", "витамин", "бад"]
+    found_forbidden = []
+    for word in forbidden_words:
+        if word in text.lower():
+            found_forbidden.append(word)
+    if found_forbidden:
+        errors.append(f"Обнаружены запрещённые слова: {', '.join(found_forbidden)}")
 
     # 1. Проверка наличия диапазона калорий
     # Паттерн: ≈ 1400–1600 ккал/сут (или вариации с дефисами)

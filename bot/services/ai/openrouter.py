@@ -61,7 +61,7 @@ class OpenRouterClient:
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json",
-                        "HTTP-Referer": "https://github.com/your-repo",  # Для аналитики OpenRouter
+                        "HTTP-Referer": settings.PROJECT_URL,  # Для аналитики OpenRouter
                         "X-Title": "AI Lead Magnet Bot"
                     },
                     json={

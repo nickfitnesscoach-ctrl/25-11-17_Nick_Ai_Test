@@ -7,6 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
+from bot.config import settings
 from bot.states import SurveyStates
 from bot.texts.survey import *
 from bot.keyboards import *
@@ -19,6 +20,7 @@ from bot.validators import (
     validate_and_normalize_timezone,
 )
 from bot.services.image_sender import image_sender
+from bot.services.database import async_session_maker, PlanRepository
 from bot.services.events import (
     log_survey_started,
     log_survey_step_completed,
@@ -27,6 +29,61 @@ from bot.services.events import (
 from bot.utils.logger import logger
 
 router = Router(name="personal_plan")
+
+
+# =============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# =============================================================================
+
+def _plans_word(count: int) -> str:
+    """
+    Правильное склонение слова 'план'.
+
+    Args:
+        count: Количество планов
+
+    Returns:
+        'план', 'плана' или 'планов'
+    """
+    if count % 10 == 1 and count % 100 != 11:
+        return "план"
+    elif 2 <= count % 10 <= 4 and (count % 100 < 10 or count % 100 >= 20):
+        return "плана"
+    else:
+        return "планов"
+
+
+async def _safe_delete_message(bot: Bot, chat_id: int, message_id: int, user_id: int = None) -> bool:
+    """
+    Безопасное удаление сообщения с детальной обработкой ошибок.
+
+    Args:
+        bot: Bot instance
+        chat_id: ID чата
+        message_id: ID сообщения для удаления
+        user_id: ID пользователя (для логирования)
+
+    Returns:
+        True если сообщение удалено, False если не удалось
+    """
+    from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+
+    try:
+        await bot.delete_message(chat_id=chat_id, message_id=message_id)
+        return True
+    except TelegramBadRequest as e:
+        error_msg = str(e).lower()
+        if "message to delete not found" in error_msg or "message can't be deleted" in error_msg:
+            logger.debug(f"Message {message_id} already deleted or can't be deleted")
+        else:
+            logger.warning(f"Failed to delete message {message_id}: {e}")
+        return False
+    except TelegramForbiddenError:
+        logger.error(f"Bot blocked by user {user_id} (chat_id={chat_id})")
+        return False
+    except Exception as e:
+        logger.warning(f"Unexpected error deleting message {message_id}: {e}")
+        return False
 
 
 # =============================================================================
@@ -86,7 +143,13 @@ async def start_survey(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("gender:"), SurveyStates.GENDER)
 async def process_gender(callback: CallbackQuery, state: FSMContext):
     """Обработка выбора пола."""
-    gender = callback.data.split(":")[1]  # "male" или "female"
+    parts = callback.data.split(":")
+    if len(parts) != 2 or parts[1] not in ["male", "female"]:
+        await callback.answer("❌ Некорректные данные", show_alert=True)
+        logger.warning(f"Invalid gender callback_data: {callback.data}")
+        return
+
+    gender = parts[1]
     await state.update_data(gender=gender)
 
     user_id = callback.from_user.id
@@ -133,15 +196,9 @@ async def process_age(message: Message, state: FSMContext):
     # Удаляем предыдущее сообщение бота и сообщение пользователя
     data = await state.get_data()
     last_msg_id = data.get("last_bot_message_id")
-    try:
-        if last_msg_id:
-            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_msg_id)
-    except Exception:
-        pass
-    try:
-        await message.delete()
-    except Exception:
-        pass
+    if last_msg_id:
+        await _safe_delete_message(message.bot, message.chat.id, last_msg_id, message.from_user.id)
+    await _safe_delete_message(message.bot, message.chat.id, message.message_id, message.from_user.id)
 
     # Переход к следующему шагу
     await state.set_state(SurveyStates.HEIGHT)
@@ -180,15 +237,9 @@ async def process_height(message: Message, state: FSMContext):
     # Удаляем предыдущее сообщение бота и сообщение пользователя
     data = await state.get_data()
     last_msg_id = data.get("last_bot_message_id")
-    try:
-        if last_msg_id:
-            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_msg_id)
-    except Exception:
-        pass
-    try:
-        await message.delete()
-    except Exception:
-        pass
+    if last_msg_id:
+        await _safe_delete_message(message.bot, message.chat.id, last_msg_id, message.from_user.id)
+    await _safe_delete_message(message.bot, message.chat.id, message.message_id, message.from_user.id)
 
     # Переход к следующему шагу
     await state.set_state(SurveyStates.WEIGHT)
@@ -227,15 +278,9 @@ async def process_weight(message: Message, state: FSMContext):
     # Удаляем предыдущее сообщение бота и сообщение пользователя
     data = await state.get_data()
     last_msg_id = data.get("last_bot_message_id")
-    try:
-        if last_msg_id:
-            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_msg_id)
-    except Exception:
-        pass
-    try:
-        await message.delete()
-    except Exception:
-        pass
+    if last_msg_id:
+        await _safe_delete_message(message.bot, message.chat.id, last_msg_id, message.from_user.id)
+    await _safe_delete_message(message.bot, message.chat.id, message.message_id, message.from_user.id)
 
     # Переход к следующему шагу
     await state.set_state(SurveyStates.TARGET_WEIGHT)
@@ -305,15 +350,9 @@ async def process_target_weight_text(message: Message, state: FSMContext):
     # Удаляем предыдущее сообщение бота и сообщение пользователя
     data = await state.get_data()
     last_msg_id = data.get("last_bot_message_id")
-    try:
-        if last_msg_id:
-            await message.bot.delete_message(chat_id=message.chat.id, message_id=last_msg_id)
-    except Exception:
-        pass
-    try:
-        await message.delete()
-    except Exception:
-        pass
+    if last_msg_id:
+        await _safe_delete_message(message.bot, message.chat.id, last_msg_id, message.from_user.id)
+    await _safe_delete_message(message.bot, message.chat.id, message.message_id, message.from_user.id)
 
     # Переход к следующему шагу
     await state.set_state(SurveyStates.ACTIVITY)
@@ -355,7 +394,20 @@ async def process_target_weight_skip(callback: CallbackQuery, state: FSMContext)
 @router.callback_query(F.data.startswith("activity:"), SurveyStates.ACTIVITY)
 async def process_activity(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """Обработка выбора уровня активности."""
-    activity = callback.data.split(":")[1]
+    parts = callback.data.split(":")
+    if len(parts) != 2:
+        await callback.answer("❌ Некорректные данные", show_alert=True)
+        logger.warning(f"Invalid activity callback_data: {callback.data}")
+        return
+
+    activity = parts[1]
+    # Validate activity value against known options
+    valid_activities = ["sedentary", "light", "moderate", "active", "very_active"]
+    if activity not in valid_activities:
+        await callback.answer("❌ Некорректный уровень активности", show_alert=True)
+        logger.warning(f"Invalid activity value: {activity}")
+        return
+
     await state.update_data(activity=activity)
 
     user_id = callback.from_user.id
@@ -405,7 +457,18 @@ async def process_activity(callback: CallbackQuery, state: FSMContext, bot: Bot)
 @router.callback_query(F.data.startswith("body:"), SurveyStates.BODY_NOW)
 async def process_body_now(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """Обработка выбора текущего типа фигуры."""
-    variant_id = int(callback.data.split(":")[1])
+    parts = callback.data.split(":")
+    if len(parts) != 2:
+        await callback.answer("❌ Некорректные данные", show_alert=True)
+        logger.warning(f"Invalid body_now callback_data: {callback.data}")
+        return
+
+    try:
+        variant_id = int(parts[1])
+    except ValueError:
+        await callback.answer("❌ Некорректный ID варианта", show_alert=True)
+        logger.warning(f"Invalid body_now variant_id: {parts[1]}")
+        return
 
     data = await state.get_data()
     gender = data.get("gender", "female")
@@ -453,7 +516,18 @@ async def process_body_now(callback: CallbackQuery, state: FSMContext, bot: Bot)
 @router.callback_query(F.data.startswith("body:"), SurveyStates.BODY_IDEAL)
 async def process_body_ideal(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """Обработка выбора идеального типа фигуры."""
-    variant_id = int(callback.data.split(":")[1])
+    parts = callback.data.split(":")
+    if len(parts) != 2:
+        await callback.answer("❌ Некорректные данные", show_alert=True)
+        logger.warning(f"Invalid body_ideal callback_data: {callback.data}")
+        return
+
+    try:
+        variant_id = int(parts[1])
+    except ValueError:
+        await callback.answer("❌ Некорректный ID варианта", show_alert=True)
+        logger.warning(f"Invalid body_ideal variant_id: {parts[1]}")
+        return
 
     data = await state.get_data()
     gender = data.get("gender", "female")
@@ -496,7 +570,13 @@ async def process_body_ideal(callback: CallbackQuery, state: FSMContext, bot: Bo
 @router.callback_query(F.data.startswith("tz:"), SurveyStates.TZ)
 async def process_tz_button(callback: CallbackQuery, state: FSMContext):
     """Обработка выбора часового пояса через кнопку."""
-    tz_value = callback.data.split(":")[1]
+    parts = callback.data.split(":")
+    if len(parts) != 2:
+        await callback.answer("❌ Некорректные данные", show_alert=True)
+        logger.warning(f"Invalid tz callback_data: {callback.data}")
+        return
+
+    tz_value = parts[1]
 
     if tz_value == "manual":
         # Запросить ручной ввод
@@ -608,15 +688,72 @@ async def cancel_survey(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "confirm:yes", SurveyStates.CONFIRM)
 async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """Подтверждение данных и запуск генерации плана."""
+    # Safety check for from_user
+    if not callback.from_user:
+        logger.error("Callback received without from_user")
+        await callback.answer("❌ Ошибка: данные пользователя недоступны", show_alert=True)
+        return
+
     user_id = callback.from_user.id
+
+    # Проверка: уже в процессе генерации?
+    current_state = await state.get_state()
+    if current_state == SurveyStates.GENERATE:
+        await callback.answer("⏳ Уже генерирую план, подождите...", show_alert=True)
+        logger.info(f"User {user_id} tried to confirm twice (race condition prevented)")
+        return
+
+    # Проверка rate limit: количество планов за сегодня
+    try:
+        async with async_session_maker() as session:
+            plans_today = await PlanRepository.count_plans_today(session, user_id)
+            if plans_today >= settings.MAX_PLANS_PER_DAY:
+                await callback.answer("⚠️ Превышен лимит", show_alert=True)
+                await callback.message.edit_text(
+                    f"⚠️ <b>Превышен дневной лимит</b>\n\n"
+                    f"Вы уже сгенерировали <b>{plans_today}</b> {_plans_word(plans_today)} сегодня.\n"
+                    f"Максимум планов в день: <b>{settings.MAX_PLANS_PER_DAY}</b>.\n\n"
+                    f"Попробуйте завтра или свяжитесь с тренером для индивидуальной консультации.",
+                    parse_mode="HTML",
+                    reply_markup=get_contact_trainer_keyboard()
+                )
+                await state.clear()
+                logger.warning(f"User {user_id} hit rate limit: {plans_today} plans today")
+                return
+    except Exception as e:
+        # Если проверка rate limit не удалась, логируем и продолжаем (fail-open)
+        logger.error(f"Rate limit check failed for user {user_id}: {e}", exc_info=True)
+
+    # Немедленно перейти в состояние GENERATE перед всеми операциями
+    await state.set_state(SurveyStates.GENERATE)
+
     data = await state.get_data()
 
     # Показать сообщение о генерации
-    await callback.message.edit_text(GENERATING_PLAN, parse_mode="HTML")
+    progress_msg = await callback.message.edit_text(GENERATING_PLAN, parse_mode="HTML")
     await callback.answer()
 
-    # Перейти в состояние генерации
-    await state.set_state(SurveyStates.GENERATE)
+    # Запустить фоновую задачу для обновления прогресса
+    import asyncio
+
+    async def send_progress_updates():
+        """Отправляет промежуточные обновления о прогрессе генерации."""
+        for i in range(1, 4):  # 3 обновления: через 10, 20, 30 секунд
+            await asyncio.sleep(10)
+            try:
+                await bot.edit_message_text(
+                    chat_id=callback.message.chat.id,
+                    message_id=progress_msg.message_id,
+                    text=f"⏳ Генерирую ваш персональный план... ({i * 10} сек)",
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                # Игнорируем ошибки редактирования (например, если сообщение уже изменено)
+                logger.debug(f"Failed to update progress message: {e}")
+                break
+
+    # Запустить обновления в фоне
+    progress_task = asyncio.create_task(send_progress_updates())
 
     # Подготовить payload для ИИ
     payload = {
@@ -660,6 +797,9 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
         # Вызов ИИ
         result = await openrouter_client.generate_plan(payload)
 
+        # Остановить обновления прогресса
+        progress_task.cancel()
+
         if not result["success"]:
             # Ошибка при генерации
             log_ai_error(user_id, "generation_failed", result.get("error", "Unknown error"))
@@ -679,35 +819,50 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
             logger.warning(f"AI response validation failed: {validation['errors']}")
             log_plan_generated(user_id, ai_model, validation_passed=False)
 
-        # Сохранить в БД
-        async with async_session_maker() as session:
-            # Получить или создать пользователя
-            user = await UserRepository.get_or_create(
-                session,
-                tg_id=user_id,
-                username=callback.from_user.username,
-                full_name=callback.from_user.full_name
-            )
+        # Сохранить в БД с обработкой ошибок
+        try:
+            async with async_session_maker() as session:
+                # Получить или создать пользователя
+                user = await UserRepository.get_or_create(
+                    session,
+                    tg_id=user_id,
+                    username=callback.from_user.username if callback.from_user else None,
+                    full_name=callback.from_user.full_name if callback.from_user else None
+                )
 
-            # Сохранить ответы опроса
-            survey = await SurveyRepository.create_survey_answer(
-                session,
-                user_id=user.id,
-                data=data
-            )
+                # Сохранить ответы опроса
+                survey = await SurveyRepository.create_survey_answer(
+                    session,
+                    user_id=user.id,
+                    data=data
+                )
 
-            # Сохранить план
-            plan = await PlanRepository.create_plan(
-                session,
-                user_id=user.id,
-                survey_answer_id=survey.id,
-                ai_text=ai_text,
-                ai_model=ai_model,
-                prompt_version=prompt_version
-            )
+                # Сохранить план
+                plan = await PlanRepository.create_plan(
+                    session,
+                    user_id=user.id,
+                    survey_answer_id=survey.id,
+                    ai_text=ai_text,
+                    ai_model=ai_model,
+                    prompt_version=prompt_version
+                )
 
-        log_survey_completed(user_id)
-        log_plan_generated(user_id, ai_model, validation_passed=validation["valid"])
+            log_survey_completed(user_id)
+            log_plan_generated(user_id, ai_model, validation_passed=validation["valid"])
+        except Exception as db_error:
+            # Критическая ошибка: план сгенерирован, но не сохранён в БД
+            logger.critical(f"DB save failed after AI generation for user {user_id}: {db_error}", exc_info=True)
+
+            # Отправить план пользователю с предупреждением
+            await callback.message.answer(
+                f"⚠️ <b>План сгенерирован, но не сохранён в базе данных</b>\n\n"
+                f"Пожалуйста, сохраните текст плана:\n\n{ai_text}\n\n"
+                f"Обратитесь к администратору для восстановления данных.",
+                parse_mode="HTML",
+                disable_notification=True
+            )
+            await state.clear()
+            return
 
         # Отправить план пользователю
         plan_message = PLAN_GENERATED_HEADER + ai_text + RETURN_TO_TRACKING
@@ -735,6 +890,9 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
         await state.clear()
 
     except Exception as e:
+        # Остановить обновления прогресса
+        progress_task.cancel()
+
         logger.error(f"Error generating plan: {e}", exc_info=True)
         log_ai_error(user_id, "unexpected_error", str(e))
         await callback.message.answer(PLAN_GENERATION_ERROR, parse_mode="HTML", disable_notification=True)

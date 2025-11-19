@@ -2,9 +2,9 @@
 Репозиторий для работы с базой данных.
 """
 
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, Dict, Any
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.models import User, SurveyAnswer, Plan
@@ -149,3 +149,26 @@ class PlanRepository:
 
         logger.info(f"Created plan: user_id={user_id}, plan_id={plan.id}, model={ai_model}")
         return plan
+
+    @staticmethod
+    async def count_plans_today(session: AsyncSession, user_id: int) -> int:
+        """
+        Подсчитать количество планов, сгенерированных пользователем сегодня.
+
+        Args:
+            session: Async сессия БД
+            user_id: ID пользователя
+
+        Returns:
+            Количество планов за сегодня
+        """
+        today_start = datetime.combine(date.today(), datetime.min.time())
+
+        result = await session.execute(
+            select(func.count(Plan.id))
+            .where(Plan.user_id == user_id)
+            .where(Plan.created_at >= today_start)
+        )
+        count = result.scalar_one()
+
+        return count
