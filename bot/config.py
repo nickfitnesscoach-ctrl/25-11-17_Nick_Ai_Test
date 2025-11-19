@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     TRAINER_USERNAME: str = "NicolasBatalin"  # Telegram username тренера (без @)
     PROJECT_URL: str = "https://github.com/your-username/ai-lead-magnet-bot"  # URL проекта для OpenRouter
 
+    # Django API Integration
+    DJANGO_API_URL: Optional[str] = None  # URL Django API (e.g., "http://localhost:8000/api/v1" or ngrok URL)
+
     # Environment
     ENVIRONMENT: str = "development"
 
