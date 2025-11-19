@@ -16,11 +16,12 @@
 - ✅ **P4 (Low):** 4/5 FIXED (80%) - Почти завершено!
 
 ### Последние изменения (2025-11-19):
-**Коммит (pending)** - Fix P2: Security Sprint Complete 🎉
-- ✅ **BUG-2025-062**: Secret filtering в логах (API keys, tokens, passwords)
-- ✅ **BUG-2025-060**: PII masking в логах (GDPR/CCPA compliance)
+**Коммит af9b25f** - Fix P2 security bugs + P4 style improvements (v2.5)
 - ✅ **BUG-2025-050**: Retry logic с exponential backoff (429, 502, 503, 504)
-- **Итого**: +3 модуля, +46 тестов, +3 зависимости
+- ✅ **BUG-2025-060**: PII masking в логах (GDPR/CCPA compliance)
+- ✅ **BUG-2025-062**: Secret filtering в логах (API keys, tokens, passwords)
+- ✅ **BUG-2025-032**: Type hints в show_confirmation()
+- **Итого**: +3 модуля, +46 тестов, 58/58 passing (100%)
 - **Статус**: 🚀 **Production-ready по безопасности!**
 
 **Коммит 079e323** - Fix high priority bugs (P2): 6 багов
