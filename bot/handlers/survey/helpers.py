@@ -64,7 +64,7 @@ async def _safe_delete_message(bot: Bot, chat_id: int, message_id: int, user_id:
 
 async def show_confirmation(message: Message, state: FSMContext) -> None:
     """Показывает подтверждение всех введённых данных."""
-    from bot.constants import ACTIVITY_LABELS
+    from bot.texts.survey import ACTIVITY_LABELS
 
     data = await state.get_data()
 
