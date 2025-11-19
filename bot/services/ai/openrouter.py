@@ -111,7 +111,8 @@ class OpenRouterClient:
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                     "HTTP-Referer": settings.PROJECT_URL,  # Для аналитики OpenRouter
-                    "X-Title": "AI Lead Magnet Bot"
+                    "X-Title": "AI Lead Magnet Bot",
+                    "X-Origin": settings.PROJECT_URL  # Origin для CORS и аналитики
                 },
                 json={
                     "model": self.model,

@@ -54,7 +54,10 @@
       "Bash(./venv/Scripts/pytest.exe tests/ -v --tb=short)",
       "Bash(./venv/Scripts/pytest.exe tests/test_secret_filter.py -v)",
       "Bash(./venv/Scripts/pytest.exe tests/ -v --tb=line)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(for file in bot/handlers/survey/*.py)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []
