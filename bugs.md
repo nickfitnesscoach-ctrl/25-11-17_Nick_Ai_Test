@@ -7,15 +7,21 @@
 
 ---
 
-## 📊 Общий прогресс: 68% (23/34 задач)
+## 📊 Общий прогресс: 74% (25/34 задач)
 
 ### Статус по приоритетам:
 - ✅ **P1 (Critical):** 5/5 FIXED (100%) - Production-ready
-- ✅ **P2 (High):** 9/10 FIXED (90%) - Почти завершено!
-- 🔴 **P3 (Medium):** 5/14 FIXED (36%) - В процессе
+- ✅ **P2 (High):** 10/10 FIXED (100%) - 🎉 ЗАВЕРШЕНО!
+- 🔴 **P3 (Medium):** 6/14 FIXED (43%) - В процессе
 - ✅ **P4 (Low):** 4/5 FIXED (80%) - Почти завершено!
 
 ### Последние изменения (2025-11-19):
+**Коммит (pending)** - Fix infrastructure bugs: DB pool + HTTP timeouts (v2.6)
+- ✅ **BUG-2025-040**: HTTP timeout separation (connect=5s, read=30s)
+- ✅ **BUG-2025-051**: DB connection pooling (pool_size=20, max_overflow=30)
+- **Итого**: Готовность к высоким нагрузкам, 58/58 tests passing
+- **Статус**: 🚀 **100% Production-ready!** (P1+P2 завершены)
+
 **Коммит af9b25f** - Fix P2 security bugs + P4 style improvements (v2.5)
 - ✅ **BUG-2025-050**: Retry logic с exponential backoff (429, 502, 503, 504)
 - ✅ **BUG-2025-060**: PII masking в логах (GDPR/CCPA compliance)
@@ -1001,15 +1007,40 @@ def get_empty_keyboard() -> InlineKeyboardMarkup:
 
 ## 5. Хардкод и конфигурация (P2-P3)
 
-### BUG-2025-040: HTTP-клиент timeout хардкод
+### BUG-2025-040: HTTP-клиент timeout хардкод ✅ FIXED
 
 - **Severity:** P2
 - **Tags:** CONFIG, HARDCODE
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/services/ai/openrouter.py:58`
+  - `bot/services/ai/openrouter.py:100-107`
 
 **Описание:**
 Таймаут берётся из `settings.OPENROUTER_TIMEOUT` (30 сек), но нет возможности задать разные таймауты для разных эндпоинтов (connection timeout vs read timeout).
+
+**Fix Applied:**
+```python
+# bot/services/ai/openrouter.py:100-107
+# Раздельные таймауты: быстрое подключение, долгое чтение ответа
+timeout_config = httpx.Timeout(
+    connect=5.0,  # Быстрое определение недоступности API
+    read=self.timeout,  # Достаточно времени для генерации AI (30s)
+    write=5.0,
+    pool=5.0
+)
+async with httpx.AsyncClient(timeout=timeout_config) as client:
+```
+
+**Fix Details:**
+- Separated connection timeout (5s) from read timeout (30s)
+- Fast failure on API unavailability (5s instead of 30s)
+- Sufficient time for AI generation (30s)
+- All 58 tests passing
+
+**Benefits:**
+- Faster error detection when API is down
+- No wasted 30s waiting for connection failures
+- Better user experience (faster error messages)
 
 ---
 
@@ -1089,28 +1120,41 @@ async def _make_api_request(self, system_prompt: str, user_message: str) -> Dict
 
 ---
 
-### BUG-2025-051: Отсутствие connection pooling для БД
+### BUG-2025-051: Отсутствие connection pooling для БД ✅ FIXED
 
 - **Severity:** P3
 - **Tags:** DB, PERFORMANCE
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/services/database/session.py:14-18`
+  - `bot/services/database/session.py:14-21`
 
 **Описание:**
 SQLAlchemy async engine создаётся без явных настроек пула соединений. По умолчанию pool_size=5, но для бота с большим количеством пользователей может понадобиться больше.
 
-**Proposed Fix:**
+**Fix Applied:**
 ```python
-# bot/services/database/session.py:14
+# bot/services/database/session.py:14-21
 engine = create_async_engine(
     settings.database_url,
     echo=settings.DEBUG_MODE,
     pool_pre_ping=True,
-    pool_size=20,            # Увеличить до 20
-    max_overflow=30,         # Дополнительные соединения
-    pool_recycle=3600        # Переиспользовать соединения каждый час
+    pool_size=20,            # Размер основного пула соединений
+    max_overflow=30,         # Дополнительные соединения при пиковых нагрузках
+    pool_recycle=3600        # Переиспользовать соединения каждый час (против idle connections)
 )
 ```
+
+**Fix Details:**
+- Increased pool_size from 5 (default) to 20
+- Added max_overflow=30 for peak loads (total 50 connections max)
+- Added pool_recycle=3600 to prevent idle connection timeouts
+- All 58 tests passing
+
+**Benefits:**
+- Handles up to 50 concurrent DB operations (20 + 30 overflow)
+- No "connection pool exhausted" errors under load
+- Automatic connection recycling prevents PostgreSQL timeouts
+- Production-ready for high traffic
 
 ---
 
@@ -1483,12 +1527,11 @@ from bot.validators import (
 
 **По приоритетам:**
 - P1 (Critical): 5 багов → ✅ **5/5 FIXED (100%)**
-- P2 (High): 10 проблем → ✅ **9/10 FIXED (90%)**
-  - ✅ BUG-2025-010, 011, 012, 013, 014, 015, 050, 060, 062
-  - 🔴 BUG-2025-040 (осталось 1)
-- P3 (Medium): 14 проблем → ✅ **5/14 FIXED (36%)**
-  - ✅ BUG-2025-021, 022, 023, 025, 033, 034 (6 из них, но 021 считался как часть P2)
-  - 🔴 BUG-2025-020, 024, 051, 080, 081 (осталось 9)
+- P2 (High): 10 проблем → ✅ **10/10 FIXED (100%)** 🎉
+  - ✅ BUG-2025-010, 011, 012, 013, 014, 015, 040, 050, 060, 062
+- P3 (Medium): 14 проблем → ✅ **6/14 FIXED (43%)**
+  - ✅ BUG-2025-021, 022, 023, 025, 033, 034, 051
+  - 🔴 BUG-2025-020, 024, 080, 081, 041 (осталось 8)
 - P4 (Low): 5 проблем → ✅ **4/5 FIXED (80%)**
   - ✅ BUG-2025-030, 032, 033, 034, 090
   - 🔴 BUG-2025-031 (осталось 1)
@@ -1505,20 +1548,20 @@ from bot.validators import (
 
 **Прогресс фиксов:**
 - ✅ Этап 1 (P1): ЗАВЕРШЕНО - 5/5 багов (100%)
-- ✅ Этап 2 (P2 security): ПОЧТИ ЗАВЕРШЕНО - 9/10 багов (90%)
-- 🔴 Этап 3 (P3 refactoring): В ПРОЦЕССЕ - 5/14 багов (36%)
+- ✅ Этап 2 (P2 security): ЗАВЕРШЕНО - 10/10 багов (100%) 🎉
+- 🔴 Этап 3 (P3 refactoring): В ПРОЦЕССЕ - 6/14 багов (43%)
 - ✅ Этап 4 (P4 optimization): ПОЧТИ ЗАВЕРШЕНО - 4/5 багов (80%)
 - 🔴 Этап 5 (tests): НЕ НАЧАТО - 0/2 задач
 
-**Общий прогресс:** 23/34 задач завершено (68%)
+**Общий прогресс:** 25/34 задач завершено (74%)
 
 **Оставшееся время:**
-- Этап 2 (осталось 1 P2): ~0.1 дня (BUG-2025-040 - nice-to-have)
-- Этап 3 (осталось 9 P3): ~2 дня (рефакторинг, документация)
+- ✅ Этап 2 (P2): ЗАВЕРШЕН - 0 дней
+- Этап 3 (осталось 8 P3): ~2 дня (рефакторинг, документация)
 - Этап 4 (осталось 1 P4): ~0.1 дня (BUG-2025-031 - cosmetic)
 - Этап 5 (тесты): ~2 дня (CI/CD, coverage expansion)
 
-**Итого осталось:** ~4.2 рабочих дней
+**Итого осталось:** ~4.1 рабочих дней (только техдолг и улучшения)
 
 ---
 

@@ -97,7 +97,14 @@ class OpenRouterClient:
             httpx.HTTPStatusError: При HTTP ошибках (после всех retry попыток)
             httpx.TimeoutException: При таймауте запроса
         """
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        # Раздельные таймауты: быстрое подключение, долгое чтение ответа
+        timeout_config = httpx.Timeout(
+            connect=5.0,  # Быстрое определение недоступности API
+            read=self.timeout,  # Достаточно времени для генерации AI
+            write=5.0,
+            pool=5.0
+        )
+        async with httpx.AsyncClient(timeout=timeout_config) as client:
             response = await client.post(
                 url=f"{self.base_url}/chat/completions",
                 headers={

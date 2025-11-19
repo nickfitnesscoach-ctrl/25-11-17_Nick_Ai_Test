@@ -15,6 +15,9 @@ engine = create_async_engine(
     settings.database_url,
     echo=settings.DEBUG_MODE,  # Логировать SQL запросы в debug режиме
     pool_pre_ping=True,  # Проверять соединение перед использованием
+    pool_size=20,  # Размер основного пула соединений
+    max_overflow=30,  # Дополнительные соединения при пиковых нагрузках
+    pool_recycle=3600,  # Переиспользовать соединения каждый час (против idle connections)
 )
 
 # Создать session maker
