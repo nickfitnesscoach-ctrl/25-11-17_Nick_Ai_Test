@@ -17,7 +17,7 @@ def register_all_handlers(dp: Dispatcher):
 
     # Personal Plan (условная регистрация через feature flag)
     if settings.is_personal_plan_enabled:
-        from .personal_plan import router as personal_plan_router
+        from .survey import router as personal_plan_router
         dp.include_router(personal_plan_router)
         logger.info("[OK] Personal Plan feature enabled")
     else:

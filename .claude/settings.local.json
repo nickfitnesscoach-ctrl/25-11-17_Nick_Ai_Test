@@ -53,7 +53,8 @@
       "Bash(./venv/Scripts/pytest.exe tests/test_pii_masking.py -v)",
       "Bash(./venv/Scripts/pytest.exe tests/ -v --tb=short)",
       "Bash(./venv/Scripts/pytest.exe tests/test_secret_filter.py -v)",
-      "Bash(./venv/Scripts/pytest.exe tests/ -v --tb=line)"
+      "Bash(./venv/Scripts/pytest.exe tests/ -v --tb=line)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []

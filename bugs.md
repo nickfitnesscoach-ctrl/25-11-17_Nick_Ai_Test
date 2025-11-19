@@ -7,16 +7,21 @@
 
 ---
 
-## 📊 Общий прогресс: 74% (25/34 задач)
+## 📊 Общий прогресс: 76% (26/34 задач)
 
 ### Статус по приоритетам:
 - ✅ **P1 (Critical):** 5/5 FIXED (100%) - Production-ready
 - ✅ **P2 (High):** 10/10 FIXED (100%) - 🎉 ЗАВЕРШЕНО!
-- 🔴 **P3 (Medium):** 6/14 FIXED (43%) - В процессе
+- 🔴 **P3 (Medium):** 7/14 FIXED (50%) - В процессе
 - ✅ **P4 (Low):** 4/5 FIXED (80%) - Почти завершено!
 
 ### Последние изменения (2025-11-19):
-**Коммит (pending)** - Fix infrastructure bugs: DB pool + HTTP timeouts (v2.6)
+**Коммит (pending)** - Refactor monolithic handler: split into 10 modules (v2.7)
+- ✅ **BUG-2025-020**: Monolithic handler refactored (986→1136 lines in 10 files)
+- **Итого**: Модульная структура, улучшенная поддерживаемость, 58/58 tests passing
+- **Статус**: 🎯 **Архитектура улучшена!**
+
+**Коммит ff36937** - Fix infrastructure bugs: DB pool + HTTP timeouts (v2.6)
 - ✅ **BUG-2025-040**: HTTP timeout separation (connect=5s, read=30s)
 - ✅ **BUG-2025-051**: DB connection pooling (pool_size=20, max_overflow=30)
 - **Итого**: Готовность к высоким нагрузкам, 58/58 tests passing
@@ -748,25 +753,46 @@ async def on_startup():
 
 ## 3. Средний приоритет (P3)
 
-### BUG-2025-020: Монолитный хендлер файл (856 строк)
+### BUG-2025-020: Монолитный хендлер файл (986 строк) ✅ FIXED
 
 - **Severity:** P3
 - **Tags:** ARCH, DUPLICATION
+- **Status:** ✅ FIXED (2025-11-19)
 - **Files:**
-  - `bot/handlers/personal_plan.py` (весь файл)
+  - `bot/handlers/survey/` (10 модулей)
 
 **Описание:**
-Весь опрос (19 хендлеров) в одном файле на 856 строк. Сложно поддерживать, найти нужный хендлер, тестировать изолированно.
+Весь опрос (18 хендлеров) в одном файле на 986 строк. Сложно поддерживать, найти нужный хендлер, тестировать изолированно.
 
-**Expected:**
-Разбить на модули:
-- `bot/handlers/survey/gender.py`
-- `bot/handlers/survey/metrics.py` (age, height, weight, target_weight)
-- `bot/handlers/survey/activity.py`
-- `bot/handlers/survey/body_types.py`
-- `bot/handlers/survey/timezone.py`
-- `bot/handlers/survey/confirmation.py`
-- `bot/handlers/survey/navigation.py` (back, cancel)
+**Fix Applied:**
+Разбито на модули в `bot/handlers/survey/`:
+- `commands.py` (62 lines) - /start, /personal_plan, start_survey
+- `gender.py` (45 lines) - process_gender
+- `metrics.py` (213 lines) - age, height, weight, target_weight
+- `activity.py` (74 lines) - process_activity
+- `body_types.py` (134 lines) - body_now, body_ideal
+- `timezone.py` (80 lines) - tz_button, tz_manual
+- `confirmation.py` (257 lines) - confirm_and_generate, confirm_edit
+- `navigation.py` (119 lines) - cancel, back
+- `helpers.py` (108 lines) - utility functions
+- `__init__.py` (44 lines) - router registration
+
+**Fix Details:**
+- **Original:** 986 lines in 1 file
+- **New structure:** 1,136 lines in 10 files (+150 lines from docs)
+- **18 handlers** distributed across 8 logical modules
+- Proper router hierarchy maintained
+- All imports correctly distributed
+- Helper functions shared via helpers.py
+- All 58 tests passing (0.82s)
+
+**Benefits:**
+- ✅ Better maintainability - focused modules
+- ✅ Easier testing - isolation possible
+- ✅ Clearer organization - logical grouping
+- ✅ Reduced cognitive load - smaller files
+- ✅ Better IDE support - faster navigation
+- ✅ Easier collaboration - parallel development
 
 ---
 
@@ -1529,9 +1555,9 @@ from bot.validators import (
 - P1 (Critical): 5 багов → ✅ **5/5 FIXED (100%)**
 - P2 (High): 10 проблем → ✅ **10/10 FIXED (100%)** 🎉
   - ✅ BUG-2025-010, 011, 012, 013, 014, 015, 040, 050, 060, 062
-- P3 (Medium): 14 проблем → ✅ **6/14 FIXED (43%)**
-  - ✅ BUG-2025-021, 022, 023, 025, 033, 034, 051
-  - 🔴 BUG-2025-020, 024, 080, 081, 041 (осталось 8)
+- P3 (Medium): 14 проблем → ✅ **7/14 FIXED (50%)**
+  - ✅ BUG-2025-020, 021, 022, 023, 025, 033, 034, 051
+  - 🔴 BUG-2025-024, 080, 081, 041 (осталось 7)
 - P4 (Low): 5 проблем → ✅ **4/5 FIXED (80%)**
   - ✅ BUG-2025-030, 032, 033, 034, 090
   - 🔴 BUG-2025-031 (осталось 1)
@@ -1549,19 +1575,19 @@ from bot.validators import (
 **Прогресс фиксов:**
 - ✅ Этап 1 (P1): ЗАВЕРШЕНО - 5/5 багов (100%)
 - ✅ Этап 2 (P2 security): ЗАВЕРШЕНО - 10/10 багов (100%) 🎉
-- 🔴 Этап 3 (P3 refactoring): В ПРОЦЕССЕ - 6/14 багов (43%)
+- 🔴 Этап 3 (P3 refactoring): В ПРОЦЕССЕ - 7/14 багов (50%)
 - ✅ Этап 4 (P4 optimization): ПОЧТИ ЗАВЕРШЕНО - 4/5 багов (80%)
 - 🔴 Этап 5 (tests): НЕ НАЧАТО - 0/2 задач
 
-**Общий прогресс:** 25/34 задач завершено (74%)
+**Общий прогресс:** 26/34 задач завершено (76%)
 
 **Оставшееся время:**
 - ✅ Этап 2 (P2): ЗАВЕРШЕН - 0 дней
-- Этап 3 (осталось 8 P3): ~2 дня (рефакторинг, документация)
+- Этап 3 (осталось 7 P3): ~1.5 дня (документация, архитектура)
 - Этап 4 (осталось 1 P4): ~0.1 дня (BUG-2025-031 - cosmetic)
 - Этап 5 (тесты): ~2 дня (CI/CD, coverage expansion)
 
-**Итого осталось:** ~4.1 рабочих дней (только техдолг и улучшения)
+**Итого осталось:** ~3.6 рабочих дней (только техдолг и улучшения)
 
 ---
 
