@@ -3,11 +3,44 @@
 """
 
 import httpx
+import re
 from typing import Optional, Dict, Any
 from datetime import datetime
 
 from bot.config import settings
 from bot.utils.logger import logger
+
+
+def parse_range_value(value) -> Optional[float]:
+    """
+    Извлекает среднее значение из диапазона или возвращает само значение.
+    
+    Примеры:
+        "[20-29]" -> 24.5
+        "[170-180]" -> 175.0
+        "75" -> 75.0
+        75 -> 75.0
+    """
+    if not value:
+        return None
+    
+    # Если это уже число
+    if isinstance(value, (int, float)):
+        return float(value)
+    
+    # Если это строка с диапазоном [min-max]
+    value_str = str(value)
+    match = re.match(r'\[(\d+)-(\d+)\]', value_str)
+    if match:
+        min_val = float(match.group(1))
+        max_val = float(match.group(2))
+        return (min_val + max_val) / 2
+    
+    # Попытка преобразовать в число
+    try:
+        return float(value_str)
+    except:
+        return None
 
 
 async def send_test_results_to_django(
@@ -26,29 +59,11 @@ async def send_test_results_to_django(
         first_name: Имя пользователя
         last_name: Фамилия пользователя (опционально)
         username: Username в Telegram (опционально)
-        survey_data: Данные опроса (gender, age, weight, height, activity, goal, etc.)
+        survey_data: Данные опроса (gender, age, weight, height, activity, goal, target_weight_kg, tz)
         calculated_kbzu: Рассчитанные КБЖУ (calories, protein, fat, carbs)
 
     Returns:
         Dict с результатом сохранения или None при ошибке
-
-    Example survey_data:
-        {
-            "age": 25,
-            "gender": "M",  # или "F"
-            "weight_kg": 75,
-            "height_cm": 180,
-            "activity": "moderately_active",
-            "goal": "fat_loss"  # fat_loss, maintenance, muscle_gain
-        }
-
-    Example calculated_kbzu:
-        {
-            "calories": 2100,
-            "protein": 130,
-            "fat": 70,
-            "carbs": 240
-        }
     """
     # Получаем URL Django API из настроек
     django_api_url = getattr(settings, 'DJANGO_API_URL', None)
@@ -60,20 +75,22 @@ async def send_test_results_to_django(
 
     url = f"{django_api_url}/telegram/save-test/"
 
-    # Маппинг полей бота на формат Django API
-    # Bot использует: activity (e.g., "moderately_active"), goal (e.g., "fat_loss")
-    # Django ожидает: activity_level, goal
+    # Парсим числовые значения (могут быть диапазонами типа "[20-29]")
+    age = parse_range_value(survey_data.get("age"))
+    weight_kg = parse_range_value(survey_data.get("weight_kg"))
+    height_cm = parse_range_value(survey_data.get("height_cm"))
+    target_weight_kg = parse_range_value(survey_data.get("target_weight_kg"))
 
     # Преобразуем данные опроса в формат Django
     answers = {
-        "age": survey_data.get("age"),
+        "age": int(age) if age else None,
         "gender": survey_data.get("gender"),
-        "weight": float(survey_data.get("weight_kg", 0)),
-        "height": int(survey_data.get("height_cm", 0)),
+        "weight": float(weight_kg) if weight_kg else 0,
+        "height": int(height_cm) if height_cm else 0,
         "activity_level": survey_data.get("activity", "moderately_active"),
         "goal": survey_data.get("goal", "maintenance"),
-        "training_level": survey_data.get("training_level"),
-        "body_goals": survey_data.get("body_goals", []),
+        "target_weight": float(target_weight_kg) if target_weight_kg else None,
+        "timezone": survey_data.get("tz")
     }
 
     payload = {
@@ -136,17 +153,11 @@ def extract_kbzu_from_plan_text(plan_text: str) -> Optional[Dict[str, Any]]:
     Returns:
         Dict с КБЖУ или None если не найдено
     """
-    import re
-
     try:
         # Улучшенные паттерны для поиска значений (более гибкие)
-        # Ищем: "Калории: 2100 ккал" или "калорий - 2100" или "2100 ккал"
         calories_pattern = r'(?:калори[ийя]|энерг)[:\s\-—]*(\d+)\s*(?:ккал|кал)?'
-        # Ищем: "Белки: 130г" или "белка - 130" или "130г белка"
         protein_pattern = r'(?:белк[иао]|протеин)[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*белк'
-        # Ищем: "Жиры: 70г" или "жира - 70" или "70г жира"
         fat_pattern = r'(?:жир[ыао])[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*жир'
-        # Ищем: "Углеводы: 240г" или "углеводов - 240" или "240г углеводов"
         carbs_pattern = r'(?:углевод[ыао])[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*углевод'
 
         # Ищем значения (case-insensitive)

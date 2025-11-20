@@ -188,18 +188,26 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
             # ✅ Отправляем результаты в Django API (non-blocking)
             # Извлекаем КБЖУ из текста плана
             kbzu = extract_kbzu_from_plan_text(ai_text)
-            if kbzu:
-                # Формируем данные для Django
-                await send_test_results_to_django(
-                    telegram_id=user_id,
-                    first_name=callback.from_user.first_name if callback.from_user else "",
-                    last_name=callback.from_user.last_name if callback.from_user else None,
-                    username=callback.from_user.username if callback.from_user else None,
-                    survey_data=data,
-                    calculated_kbzu=kbzu
-                )
-            else:
-                logger.warning(f"Could not extract KBZU from AI plan for user {user_id}, skipping Django sync")
+            
+            if not kbzu:
+                logger.warning(f"Could not extract KBZU from AI plan for user {user_id}, using zeros")
+                # Используем нулевые значения - КБЖУ будет рассчитан в Mini App
+                kbzu = {
+                    "calories": 0,
+                    "protein": 0,
+                    "fat": 0,
+                    "carbs": 0
+                }
+            
+            # Формируем данные для Django (теперь всегда отправляем)
+            await send_test_results_to_django(
+                telegram_id=user_id,
+                first_name=callback.from_user.first_name if callback.from_user else "",
+                last_name=callback.from_user.last_name if callback.from_user else None,
+                username=callback.from_user.username if callback.from_user else None,
+                survey_data=data,
+                calculated_kbzu=kbzu
+            )
 
         except Exception as db_error:
             # Критическая ошибка: план сгенерирован, но не сохранён в БД
