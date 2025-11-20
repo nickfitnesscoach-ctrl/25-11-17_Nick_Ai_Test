@@ -101,6 +101,7 @@ temp/
 test_*.py
 fix_*.py
 create_*.py
+!tests/test_placeholder.py
 
 # macOS
 .DS_Store
