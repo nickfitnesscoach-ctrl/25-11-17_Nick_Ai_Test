@@ -90,6 +90,13 @@ async def show_confirmation(message: Message, state: FSMContext) -> None:
             return "не выбраны"
         return ", ".join(BODY_GOALS_LABELS.get(goal, goal) for goal in goals)
 
+    def format_health_limitations(limitations: list[str] | None) -> str:
+        if not limitations:
+            return "не указаны"
+        if "none" in limitations:
+            return HEALTH_LIMITATIONS_LABELS.get("none", "нет ограничений")
+        return ", ".join(HEALTH_LIMITATIONS_LABELS.get(item, item) for item in limitations)
+
     # Форматирование данных
     confirmation_text = CONFIRM_DATA_HEADER + CONFIRM_DATA_TEMPLATE.format(
         gender=format_gender(data.get("gender")),
@@ -100,6 +107,7 @@ async def show_confirmation(message: Message, state: FSMContext) -> None:
         activity=ACTIVITY_LABELS.get(data.get("activity"), data.get("activity")),
         training_level=format_training_level(data.get("training_level")),
         body_goals=format_body_goals(data.get("body_goals")),
+        health_limitations=format_health_limitations(data.get("health_limitations")),
         body_now_id=data.get("body_now_id"),
         body_now_label=data.get("body_now_label"),
         body_ideal_id=data.get("body_ideal_id"),

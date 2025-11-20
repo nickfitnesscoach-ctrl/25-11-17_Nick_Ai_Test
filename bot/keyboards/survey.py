@@ -6,7 +6,11 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.constants import ACTIVITY_LEVELS, POPULAR_TIMEZONES
-from bot.texts.survey import TRAINING_LEVEL_LABELS, BODY_GOALS_LABELS
+from bot.texts.survey import (
+    TRAINING_LEVEL_LABELS,
+    BODY_GOALS_LABELS,
+    HEALTH_LIMITATIONS_LABELS,
+)
 from bot.config import settings
 
 
@@ -57,6 +61,24 @@ def get_body_goals_keyboard(selected: list[str] | None = None) -> InlineKeyboard
 
     builder.row(
         InlineKeyboardButton(text="✅ Готово", callback_data="body_goals:done")
+    )
+
+    return builder.as_markup()
+
+
+def get_health_limitations_keyboard(selected: list[str] | None = None) -> InlineKeyboardMarkup:
+    """Клавиатура для множественного выбора ограничений по здоровью/питанию."""
+    selected = set(selected or [])
+    builder = InlineKeyboardBuilder()
+
+    for key, label in HEALTH_LIMITATIONS_LABELS.items():
+        prefix = "✅ " if key in selected else "▫️ "
+        builder.row(
+            InlineKeyboardButton(text=f"{prefix}{label}", callback_data=f"health_limit:{key}")
+        )
+
+    builder.row(
+        InlineKeyboardButton(text="✅ Готово", callback_data="health_limitations:done")
     )
 
     return builder.as_markup()

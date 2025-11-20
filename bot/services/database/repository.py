@@ -92,6 +92,7 @@ class SurveyRepository:
             activity=data["activity"],
             training_level=data.get("training_level"),
             body_goals=data.get("body_goals"),
+            health_limitations=data.get("health_limitations"),
             body_now_id=data["body_now_id"],
             body_now_label=data.get("body_now_label"),
             body_now_file=data["body_now_file"],

@@ -738,6 +738,7 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
         "activity": data["activity"],
         "training_level": data.get("training_level"),
         "body_goals": data.get("body_goals", []),
+        "health_limitations": data.get("health_limitations", []),
         "body_now": {
             "id": data["body_now_id"],
             "label": data.get("body_now_label", "")

@@ -5,16 +5,18 @@
 import json
 from typing import Dict, Any
 from bot.constants import BODY_DESCRIPTIONS
+from bot.texts.survey import HEALTH_LIMITATIONS_LABELS
 
 # Версия промпта (для отслеживания изменений в БД)
 # Changelog:
+# - v2.5.0 (2025-11-20): Добавлены ограничения по здоровью/питанию в prompt
 # - v2.4.0 (2025-11-20): Добавлены уровни тренированности и цели по телу в prompt
 # - v2.3.1 (2025-11-19): Добавлены детальные описания body types из BODY_DESCRIPTIONS
 # - v2.3.0: Улучшена математика таймлайна (согласованность сроков)
 # - v2.2.0: Добавлены ограничения на длину ответа (2000 символов)
 # - v2.1.0: Критические правила по языку и формату
 # - v2.0.0: Полная переработка структуры (9 блоков)
-PROMPT_VERSION = "v2.4.0"
+PROMPT_VERSION = "v2.5.0"
 
 
 SYSTEM_PROMPT_RU = """Ты — профессиональный фитнес-консультант с опытом работы более 10 лет, который создаёт персонализированные планы питания и тренировок.
@@ -210,6 +212,16 @@ def build_user_message(payload: Dict[str, Any]) -> str:
     body_goals = payload.get("body_goals") or []
     body_goals_ru = ", ".join(body_goals_labels.get(goal, goal) for goal in body_goals) if body_goals else "не выбраны"
 
+    health_limitations = payload.get("health_limitations") or []
+    if "none" in health_limitations:
+        health_limitations_ru = HEALTH_LIMITATIONS_LABELS.get("none", "нет ограничений")
+    elif health_limitations:
+        health_limitations_ru = ", ".join(
+            HEALTH_LIMITATIONS_LABELS.get(item, item) for item in health_limitations
+        )
+    else:
+        health_limitations_ru = "не указаны"
+
     goal_map = {
         "fat_loss": "Снижение веса",
         "muscle_gain": "Набор мышечной массы",
@@ -246,6 +258,7 @@ def build_user_message(payload: Dict[str, Any]) -> str:
 - Уровень активности: {activity_ru}
 - Уровень тренированности: {training_level_ru}
 - Цели по телу: {body_goals_ru}
+- Ограничения: {health_limitations_ru}
 
 **Тип фигуры:**
 - Текущий: {body_now.get('label', 'не указан')}
