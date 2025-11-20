@@ -21,6 +21,7 @@ from . import (
     metrics,
     activity,
     training_goals,
+    health,
     body_types,
     timezone,
     confirmation,
@@ -37,6 +38,7 @@ router.include_router(gender.router)
 router.include_router(metrics.router)
 router.include_router(activity.router)
 router.include_router(training_goals.router)
+router.include_router(health.router)
 router.include_router(body_types.router)
 router.include_router(timezone.router)
 router.include_router(confirmation.router)

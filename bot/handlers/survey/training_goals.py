@@ -1,5 +1,5 @@
 """Хендлеры для уровня тренированности и целей по телу."""
-from aiogram import Router, F, Bot
+from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 
@@ -11,12 +11,12 @@ from bot.texts.survey import (
     BODY_GOALS_QUESTION,
     BODY_GOALS_SELECTED_TEMPLATE,
     BODY_GOALS_MIN_WARNING,
-    BODY_NOW_QUESTION_HEADER,
+    HEALTH_LIMITATIONS_QUESTION,
+    HEALTH_LIMITATIONS_SELECTED_TEMPLATE,
+    HEALTH_LIMITATIONS_LABELS,
 )
-from bot.keyboards import get_body_goals_keyboard
+from bot.keyboards import get_body_goals_keyboard, get_health_limitations_keyboard
 from bot.services.events import log_survey_step_completed
-from bot.services.image_sender import image_sender
-from .helpers import _safe_delete_message
 
 router = Router(name="survey_training_goals")
 
@@ -25,6 +25,14 @@ def _format_selected_goals(selected: list[str]) -> str:
     if not selected:
         return "ничего не выбрано"
     return ", ".join(BODY_GOALS_LABELS.get(goal, goal) for goal in selected)
+
+
+def _format_selected_limitations(selected: list[str]) -> str:
+    if not selected:
+        return "ничего не выбрано"
+    if "none" in selected:
+        return HEALTH_LIMITATIONS_LABELS.get("none", "Никаких ограничений")
+    return ", ".join(HEALTH_LIMITATIONS_LABELS.get(item, item) for item in selected)
 
 
 @router.callback_query(F.data.startswith("training_level:"), SurveyStates.TRAINING_LEVEL)
@@ -118,25 +126,25 @@ async def confirm_body_goals(callback: CallbackQuery, state: FSMContext, bot: Bo
     user_id = callback.from_user.id
     log_survey_step_completed(user_id, "BODY_GOALS", {"body_goals": selected})
 
-    await state.set_state(SurveyStates.BODY_NOW)
+    await state.set_state(SurveyStates.HEALTH_LIMITATIONS)
 
-    last_msg_id = data.get("last_bot_message_id")
-    if last_msg_id:
-        await _safe_delete_message(bot, callback.message.chat.id, last_msg_id, user_id)
-    try:
-        await callback.message.delete()
-    except Exception:
-        pass
-
-    gender = data.get("gender", "female")
-
-    message_ids = await image_sender.send_body_type_options(
-        bot=bot,
-        chat_id=callback.message.chat.id,
-        gender=gender,
-        stage="now",
-        header_message=BODY_NOW_QUESTION_HEADER,
+    limitations_selected = data.get("health_limitations", []) or []
+    limitations_text = HEALTH_LIMITATIONS_SELECTED_TEMPLATE.format(
+        selected=_format_selected_limitations(limitations_selected)
     )
 
-    await state.update_data(body_now_message_ids=message_ids)
+    training_label = TRAINING_LEVEL_LABELS.get(data.get("training_level"), "")
+    message_text = TRAINING_LEVEL_SAVED.format(label=training_label) if training_label else ""
+    message_text += "\n\n" + BODY_GOALS_SELECTED_TEMPLATE.format(
+        selected=_format_selected_goals(selected)
+    )
+    message_text += "\n\n" + HEALTH_LIMITATIONS_QUESTION + "\n\n" + limitations_text
+
+    await callback.message.edit_text(
+        message_text,
+        reply_markup=get_health_limitations_keyboard(limitations_selected),
+        parse_mode="HTML",
+    )
+
+    await state.update_data(last_bot_message_id=callback.message.message_id)
     await callback.answer()

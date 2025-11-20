@@ -32,6 +32,7 @@ class SurveyAnswer(Base):
     activity: Mapped[str] = mapped_column(String(20), nullable=False)
     training_level: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     body_goals: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
+    health_limitations: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
 
     # Типы фигуры
     body_now_id: Mapped[int] = mapped_column(Integer, nullable=False)

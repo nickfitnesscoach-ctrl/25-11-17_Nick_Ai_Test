@@ -22,6 +22,9 @@ from bot.texts.survey import (
     BODY_GOALS_LABELS,
     TRAINING_LEVEL_LABELS,
     TRAINING_LEVEL_SAVED,
+    HEALTH_LIMITATIONS_QUESTION,
+    HEALTH_LIMITATIONS_SELECTED_TEMPLATE,
+    HEALTH_LIMITATIONS_LABELS,
     TZ_QUESTION,
     BODY_NOW_QUESTION_HEADER,
     BODY_IDEAL_QUESTION_HEADER,
@@ -32,6 +35,7 @@ from bot.keyboards import (
     get_activity_keyboard,
     get_training_level_keyboard,
     get_body_goals_keyboard,
+    get_health_limitations_keyboard,
     get_timezone_keyboard,
 )
 from bot.services.image_sender import image_sender
@@ -66,7 +70,8 @@ async def go_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
         SurveyStates.ACTIVITY: (SurveyStates.TARGET_WEIGHT, TARGET_WEIGHT_QUESTION, get_target_weight_keyboard),
         SurveyStates.TRAINING_LEVEL: (SurveyStates.ACTIVITY, ACTIVITY_QUESTION, get_activity_keyboard),
         SurveyStates.BODY_GOALS: (SurveyStates.TRAINING_LEVEL, TRAINING_LEVEL_QUESTION, get_training_level_keyboard),
-        SurveyStates.BODY_NOW: (SurveyStates.BODY_GOALS, BODY_GOALS_QUESTION, get_body_goals_keyboard),
+        SurveyStates.HEALTH_LIMITATIONS: (SurveyStates.BODY_GOALS, BODY_GOALS_QUESTION, get_body_goals_keyboard),
+        SurveyStates.BODY_NOW: (SurveyStates.HEALTH_LIMITATIONS, HEALTH_LIMITATIONS_QUESTION, get_health_limitations_keyboard),
         SurveyStates.BODY_IDEAL: (SurveyStates.BODY_NOW, None, None),
         SurveyStates.TZ: (SurveyStates.BODY_IDEAL, None, None),
         SurveyStates.CONFIRM: (SurveyStates.TZ, TZ_QUESTION, get_timezone_keyboard),
@@ -152,6 +157,38 @@ async def go_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
             chat_id=callback.message.chat.id,
             text=message_text,
             reply_markup=get_body_goals_keyboard(selected_goals),
+            parse_mode="HTML",
+        )
+        await state.update_data(last_bot_message_id=sent_msg.message_id)
+        return
+
+    # Специальная обработка для возврата к ограничениям по здоровью/питанию
+    if prev_state == SurveyStates.HEALTH_LIMITATIONS:
+        data = await state.get_data()
+        # Очистить ранее отправленные изображения текущего типа фигуры
+        try:
+            body_now_ids = data.get("body_now_message_ids", [])
+            if body_now_ids:
+                await image_sender.delete_messages(bot, callback.message.chat.id, body_now_ids)
+        except Exception:
+            pass
+
+        limitations_selected = data.get("health_limitations", []) or []
+        selected_text = HEALTH_LIMITATIONS_SELECTED_TEMPLATE.format(
+            selected=", ".join(
+                HEALTH_LIMITATIONS_LABELS.get(item, item) for item in limitations_selected
+            )
+            if limitations_selected
+            else "ничего не выбрано"
+        )
+
+        await state.set_state(SurveyStates.HEALTH_LIMITATIONS)
+        await callback.answer()
+
+        sent_msg = await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=HEALTH_LIMITATIONS_QUESTION + "\n\n" + selected_text,
+            reply_markup=get_health_limitations_keyboard(limitations_selected),
             parse_mode="HTML",
         )
         await state.update_data(last_bot_message_id=sent_msg.message_id)
