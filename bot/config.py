@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     OPENROUTER_RETRY_MULTIPLIER: int = 2  # Множитель для exponential backoff
 
     # Feature Flags
-    FEATURE_PERSONAL_PLAN: str = "off"
+    FEATURE_PERSONAL_PLAN: str = "on"
     DEBUG_MODE: bool = False
 
     # Logging
