@@ -200,6 +200,13 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
                     "carbs": 0
                 }
             
+            # Формируем AI рекомендации для Django
+            ai_recommendations = {
+                "plan_text": ai_text,
+                "model": ai_model,
+                "prompt_version": prompt_version
+            }
+
             # Формируем данные для Django (теперь всегда отправляем)
             await send_test_results_to_django(
                 telegram_id=user_id,
@@ -207,7 +214,8 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
                 last_name=callback.from_user.last_name if callback.from_user else None,
                 username=callback.from_user.username if callback.from_user else None,
                 survey_data=data,
-                calculated_kbzu=kbzu
+                calculated_kbzu=kbzu,
+                ai_recommendations=ai_recommendations
             )
 
         except Exception as db_error:
