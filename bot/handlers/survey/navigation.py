@@ -9,13 +9,30 @@ from aiogram.fsm.context import FSMContext
 
 from bot.states import SurveyStates
 from bot.texts.survey import (
-    SURVEY_CANCELLED, GENDER_QUESTION, AGE_QUESTION, HEIGHT_QUESTION,
-    WEIGHT_QUESTION, TARGET_WEIGHT_QUESTION, ACTIVITY_QUESTION, TZ_QUESTION,
-    BODY_NOW_QUESTION_HEADER, BODY_IDEAL_QUESTION_HEADER
+    SURVEY_CANCELLED,
+    GENDER_QUESTION,
+    AGE_QUESTION,
+    HEIGHT_QUESTION,
+    WEIGHT_QUESTION,
+    TARGET_WEIGHT_QUESTION,
+    ACTIVITY_QUESTION,
+    TRAINING_LEVEL_QUESTION,
+    BODY_GOALS_QUESTION,
+    BODY_GOALS_SELECTED_TEMPLATE,
+    BODY_GOALS_LABELS,
+    TRAINING_LEVEL_LABELS,
+    TRAINING_LEVEL_SAVED,
+    TZ_QUESTION,
+    BODY_NOW_QUESTION_HEADER,
+    BODY_IDEAL_QUESTION_HEADER,
 )
 from bot.keyboards import (
-    get_gender_keyboard, get_target_weight_keyboard, get_activity_keyboard,
-    get_timezone_keyboard
+    get_gender_keyboard,
+    get_target_weight_keyboard,
+    get_activity_keyboard,
+    get_training_level_keyboard,
+    get_body_goals_keyboard,
+    get_timezone_keyboard,
 )
 from bot.services.image_sender import image_sender
 from bot.services.events import log_survey_cancelled
@@ -47,7 +64,9 @@ async def go_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
         SurveyStates.WEIGHT: (SurveyStates.HEIGHT, HEIGHT_QUESTION, None),
         SurveyStates.TARGET_WEIGHT: (SurveyStates.WEIGHT, WEIGHT_QUESTION, None),
         SurveyStates.ACTIVITY: (SurveyStates.TARGET_WEIGHT, TARGET_WEIGHT_QUESTION, get_target_weight_keyboard),
-        SurveyStates.BODY_NOW: (SurveyStates.ACTIVITY, ACTIVITY_QUESTION, get_activity_keyboard),
+        SurveyStates.TRAINING_LEVEL: (SurveyStates.ACTIVITY, ACTIVITY_QUESTION, get_activity_keyboard),
+        SurveyStates.BODY_GOALS: (SurveyStates.TRAINING_LEVEL, TRAINING_LEVEL_QUESTION, get_training_level_keyboard),
+        SurveyStates.BODY_NOW: (SurveyStates.BODY_GOALS, BODY_GOALS_QUESTION, get_body_goals_keyboard),
         SurveyStates.BODY_IDEAL: (SurveyStates.BODY_NOW, None, None),
         SurveyStates.TZ: (SurveyStates.BODY_IDEAL, None, None),
         SurveyStates.CONFIRM: (SurveyStates.TZ, TZ_QUESTION, get_timezone_keyboard),
@@ -65,7 +84,7 @@ async def go_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
     except Exception:
         pass  # Игнорируем ошибки удаления
 
-    # Специальная обработка для BODY_NOW (нужно показать изображения)
+    # Специальная обработка для BODY_IDEAL (нужно показать изображения BODY_NOW)
     if current_state == SurveyStates.BODY_IDEAL:
         data = await state.get_data()
         gender = data.get("gender", "female")
@@ -103,6 +122,39 @@ async def go_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
         if message_ids:
             await state.update_data(body_ideal_message_ids=message_ids)
+        return
+
+    # Специальная обработка для возврата к целям по телу (нужно показать выбранные варианты)
+    if prev_state == SurveyStates.BODY_GOALS:
+        data = await state.get_data()
+        # Очистить ранее отправленные изображения текущего типа фигуры
+        try:
+            body_now_ids = data.get("body_now_message_ids", [])
+            if body_now_ids:
+                await image_sender.delete_messages(bot, callback.message.chat.id, body_now_ids)
+        except Exception:
+            pass
+        training_label = TRAINING_LEVEL_LABELS.get(data.get("training_level"), "")
+        selected_goals = data.get("body_goals", [])
+        selected_text = BODY_GOALS_SELECTED_TEMPLATE.format(
+            selected=", ".join(BODY_GOALS_LABELS.get(goal, goal) for goal in selected_goals)
+            if selected_goals
+            else "ничего не выбрано"
+        )
+
+        message_text = TRAINING_LEVEL_SAVED.format(label=training_label)
+        message_text += "\n\n" + BODY_GOALS_QUESTION + "\n\n" + selected_text
+
+        await state.set_state(SurveyStates.BODY_GOALS)
+        await callback.answer()
+
+        sent_msg = await bot.send_message(
+            chat_id=callback.message.chat.id,
+            text=message_text,
+            reply_markup=get_body_goals_keyboard(selected_goals),
+            parse_mode="HTML",
+        )
+        await state.update_data(last_bot_message_id=sent_msg.message_id)
         return
 
     # Стандартная обработка для остальных шагов

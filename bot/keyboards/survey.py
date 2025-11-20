@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.constants import ACTIVITY_LEVELS, POPULAR_TIMEZONES
+from bot.texts.survey import TRAINING_LEVEL_LABELS, BODY_GOALS_LABELS
 from bot.config import settings
 
 
@@ -27,6 +28,36 @@ def get_activity_keyboard() -> InlineKeyboardMarkup:
         builder.row(
             InlineKeyboardButton(text=data["label"], callback_data=f"activity:{key}")
         )
+
+    return builder.as_markup()
+
+
+def get_training_level_keyboard() -> InlineKeyboardMarkup:
+    """Клавиатура для выбора уровня тренированности."""
+    builder = InlineKeyboardBuilder()
+
+    for key, label in TRAINING_LEVEL_LABELS.items():
+        builder.row(
+            InlineKeyboardButton(text=label, callback_data=f"training_level:{key}")
+        )
+
+    return builder.as_markup()
+
+
+def get_body_goals_keyboard(selected: list[str] | None = None) -> InlineKeyboardMarkup:
+    """Клавиатура для множественного выбора целей по телу."""
+    selected = set(selected or [])
+    builder = InlineKeyboardBuilder()
+
+    for key, label in BODY_GOALS_LABELS.items():
+        prefix = "✅ " if key in selected else "▫️ "
+        builder.row(
+            InlineKeyboardButton(text=f"{prefix}{label}", callback_data=f"body_goal:{key}")
+        )
+
+    builder.row(
+        InlineKeyboardButton(text="✅ Готово", callback_data="body_goals:done")
+    )
 
     return builder.as_markup()
 

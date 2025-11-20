@@ -7,10 +7,11 @@ from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from bot.states import SurveyStates
-from bot.texts.survey import BODY_NOW_QUESTION_HEADER
-from bot.services.image_sender import image_sender
+from bot.texts.survey import TRAINING_LEVEL_QUESTION
+from bot.keyboards import get_training_level_keyboard
 from bot.services.events import log_survey_step_completed
 from bot.utils.logger import logger
+from .helpers import _safe_delete_message
 
 router = Router(name="survey_activity")
 
@@ -37,38 +38,23 @@ async def process_activity(callback: CallbackQuery, state: FSMContext, bot: Bot)
     user_id = callback.from_user.id
     log_survey_step_completed(user_id, "ACTIVITY", {"activity": activity})
 
-    # Переход к следующему шагу - BODY_NOW (показ изображений)
-    await state.set_state(SurveyStates.BODY_NOW)
-    await callback.answer()
+    # Переход к следующему шагу - уровень тренированности
+    await state.set_state(SurveyStates.TRAINING_LEVEL)
 
-    # Получить данные для удаления предыдущего сообщения
     data = await state.get_data()
     last_msg_id = data.get("last_bot_message_id")
-
-    # Удаляем предыдущее сообщение бота (подтверждение целевого веса)
-    try:
-        if last_msg_id:
-            await bot.delete_message(chat_id=callback.message.chat.id, message_id=last_msg_id)
-    except Exception:
-        pass
-
-    # Удаляем сообщение с вопросом об активности
+    if last_msg_id:
+        await _safe_delete_message(bot, callback.message.chat.id, last_msg_id, user_id)
     try:
         await callback.message.delete()
     except Exception:
         pass
 
-    # Получить пол для показа правильных изображений
-    gender = data.get("gender", "female")
-
-    # Отправить изображения вариантов типов фигуры
-    message_ids = await image_sender.send_body_type_options(
-        bot=bot,
-        chat_id=callback.message.chat.id,
-        gender=gender,
-        stage="now",
-        header_message=BODY_NOW_QUESTION_HEADER
+    sent_msg = await callback.message.answer(
+        TRAINING_LEVEL_QUESTION,
+        reply_markup=get_training_level_keyboard(),
+        parse_mode="HTML",
+        disable_notification=True,
     )
-
-    # Сохранить message_ids для последующего удаления
-    await state.update_data(body_now_message_ids=message_ids)
+    await state.update_data(last_bot_message_id=sent_msg.message_id)
+    await callback.answer()

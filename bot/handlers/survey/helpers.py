@@ -82,6 +82,14 @@ async def show_confirmation(message: Message, state: FSMContext) -> None:
             return f"UTC{sign}{abs(hours)}:{mins:02d}"
         return f"UTC{sign}{abs(hours)}"
 
+    def format_training_level(level: str | None) -> str:
+        return TRAINING_LEVEL_LABELS.get(level, "не указан")
+
+    def format_body_goals(goals: list[str] | None) -> str:
+        if not goals:
+            return "не выбраны"
+        return ", ".join(BODY_GOALS_LABELS.get(goal, goal) for goal in goals)
+
     # Форматирование данных
     confirmation_text = CONFIRM_DATA_HEADER + CONFIRM_DATA_TEMPLATE.format(
         gender=format_gender(data.get("gender")),
@@ -90,6 +98,8 @@ async def show_confirmation(message: Message, state: FSMContext) -> None:
         weight=data.get("weight_kg"),
         target_weight=format_target_weight(data.get("target_weight_kg")),
         activity=ACTIVITY_LABELS.get(data.get("activity"), data.get("activity")),
+        training_level=format_training_level(data.get("training_level")),
+        body_goals=format_body_goals(data.get("body_goals")),
         body_now_id=data.get("body_now_id"),
         body_now_label=data.get("body_now_label"),
         body_ideal_id=data.get("body_ideal_id"),

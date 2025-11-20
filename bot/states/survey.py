@@ -14,6 +14,8 @@ class SurveyStates(StatesGroup):
     WEIGHT = State()           # Ввод веса
     TARGET_WEIGHT = State()    # Целевой вес (опционально)
     ACTIVITY = State()         # Уровень активности
+    TRAINING_LEVEL = State()   # Уровень тренированности
+    BODY_GOALS = State()       # Цели по телу (множественный выбор)
     BODY_NOW = State()         # Текущий тип фигуры
     BODY_IDEAL = State()       # Идеальный тип фигуры
     TZ = State()               # Часовой пояс

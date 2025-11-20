@@ -8,12 +8,13 @@ from bot.constants import BODY_DESCRIPTIONS
 
 # Версия промпта (для отслеживания изменений в БД)
 # Changelog:
+# - v2.4.0 (2025-11-20): Добавлены уровни тренированности и цели по телу в prompt
 # - v2.3.1 (2025-11-19): Добавлены детальные описания body types из BODY_DESCRIPTIONS
 # - v2.3.0: Улучшена математика таймлайна (согласованность сроков)
 # - v2.2.0: Добавлены ограничения на длину ответа (2000 символов)
 # - v2.1.0: Критические правила по языку и формату
 # - v2.0.0: Полная переработка структуры (9 блоков)
-PROMPT_VERSION = "v2.3.1"
+PROMPT_VERSION = "v2.4.0"
 
 
 SYSTEM_PROMPT_RU = """Ты — профессиональный фитнес-консультант с опытом работы более 10 лет, который создаёт персонализированные планы питания и тренировок.
@@ -187,6 +188,28 @@ def build_user_message(payload: Dict[str, Any]) -> str:
     }
     activity_ru = activity_map.get(payload.get("activity", "moderate"), "Умеренная активность")
 
+    training_level_map = {
+        "beginner": "Новичок — не тренируется или реже 1 раза в неделю",
+        "intermediate": "Средний — 2–3 тренировки в неделю, базовое понимание техники",
+        "advanced": "Продвинутый — 4+ тренировки в неделю, уверенное выполнение упражнений",
+        "home_irregular": "Домашний формат — тренировки дома время от времени",
+    }
+    training_level_ru = training_level_map.get(payload.get("training_level"), "не указан")
+
+    body_goals_labels = {
+        "weight_loss": "Снизить вес",
+        "belly_sides": "Убрать живот и бока",
+        "tighten_body": "Подтянуть тело, убрать дряблость кожи",
+        "legs_hips_volume": "Уменьшить объёмы бёдер / ног",
+        "glutes_shape": "Сформировать более круглую/подтянутую попу",
+        "back_posture": "Прокачать спину и осанку",
+        "muscle_gain": "Увеличить мышечную массу",
+        "more_definition": "Стать более рельефным визуально",
+        "reduce_bloating": "Уменьшить отёчность и «задутый» вид",
+    }
+    body_goals = payload.get("body_goals") or []
+    body_goals_ru = ", ".join(body_goals_labels.get(goal, goal) for goal in body_goals) if body_goals else "не выбраны"
+
     goal_map = {
         "fat_loss": "Снижение веса",
         "muscle_gain": "Набор мышечной массы",
@@ -221,6 +244,8 @@ def build_user_message(payload: Dict[str, Any]) -> str:
 - Вес: {payload.get('weight_kg')} кг
 - Целевой вес: {payload.get('target_weight_kg', 'не указан')} кг
 - Уровень активности: {activity_ru}
+- Уровень тренированности: {training_level_ru}
+- Цели по телу: {body_goals_ru}
 
 **Тип фигуры:**
 - Текущий: {body_now.get('label', 'не указан')}

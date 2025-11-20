@@ -101,6 +101,8 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
         "weight_kg": float(data["weight_kg"]),
         "target_weight_kg": float(data["target_weight_kg"]) if data.get("target_weight_kg") else None,
         "activity": data["activity"],
+        "training_level": data.get("training_level"),
+        "body_goals": data.get("body_goals", []),
         "body_now": {
             "id": data["body_now_id"],
             "label": data.get("body_now_label", "")
