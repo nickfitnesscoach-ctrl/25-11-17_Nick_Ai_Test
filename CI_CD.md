@@ -1,13 +1,13 @@
 # CI/CD
 
-Этот проект теперь содержит GitHub Actions workflow `.github/workflows/ci-cd.yml`, который автоматизирует проверку кода и деплой на продовый сервер.
+Этот проект теперь содержит GitHub Actions workflow `.github/workflows/ci-cd.yml`, который автоматизирует базовую проверку кода и деплой на продовый сервер.
 
 ## Что делает пайплайн
 
 - **CI (job `test`)** — на каждом `push`/`pull_request` в `main`:
   - checkout репозитория;
-  - установка Python 3.12 + зависимостей из `requirements.txt` и `tests/requirements-test.txt`;
-  - запуск `pytest`.
+  - установка Python 3.12 + зависимостей из `requirements.txt`;
+  - выполнение заглушки вместо тестов (сообщение в логах `Tests отключены, pytest не запускаем`).
 - **CD (job `deploy`)** — на `push` в `main` после успешных тестов:
   - подключение по SSH к серверу;
   - `git pull` в каталоге проекта;
