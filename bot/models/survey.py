@@ -2,7 +2,7 @@
 Модели для опроса Personal Plan.
 """
 
-from sqlalchemy import BigInteger, String, Integer, Numeric, Text, ForeignKey, CheckConstraint, TIMESTAMP
+from sqlalchemy import BigInteger, String, Integer, Numeric, Text, ForeignKey, CheckConstraint, TIMESTAMP, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List
 from datetime import datetime
@@ -30,6 +30,8 @@ class SurveyAnswer(Base):
     weight_kg: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
     target_weight_kg: Mapped[Optional[float]] = mapped_column(Numeric(5, 2), nullable=True)
     activity: Mapped[str] = mapped_column(String(20), nullable=False)
+    training_level: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    body_goals: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
 
     # Типы фигуры
     body_now_id: Mapped[int] = mapped_column(Integer, nullable=False)

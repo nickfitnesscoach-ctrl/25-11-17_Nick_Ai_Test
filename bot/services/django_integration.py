@@ -71,7 +71,9 @@ async def send_test_results_to_django(
         "weight": float(survey_data.get("weight_kg", 0)),
         "height": int(survey_data.get("height_cm", 0)),
         "activity_level": survey_data.get("activity", "moderately_active"),
-        "goal": survey_data.get("goal", "maintenance")
+        "goal": survey_data.get("goal", "maintenance"),
+        "training_level": survey_data.get("training_level"),
+        "body_goals": survey_data.get("body_goals", []),
     }
 
     payload = {
