@@ -375,7 +375,7 @@ async def process_activity(callback: CallbackQuery, state: FSMContext, bot: Bot)
 
     activity = parts[1]
     # Validate activity value against known options
-    valid_activities = ["sedentary", "light", "moderate", "active", "very_active"]
+    valid_activities = ["sedentary", "light", "moderate", "active"]
     if activity not in valid_activities:
         await callback.answer("❌ Некорректный уровень активности", show_alert=True)
         logger.warning(f"Invalid activity value: {activity}")

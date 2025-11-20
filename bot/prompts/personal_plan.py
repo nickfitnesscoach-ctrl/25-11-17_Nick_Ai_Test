@@ -194,13 +194,12 @@ def build_user_message(payload: Dict[str, Any]) -> str:
     # Форматирование данных
     gender_ru = "Мужской" if payload.get("gender") == "male" else "Женский"
     activity_map = {
-        "sedentary": "Сидячий образ жизни",
-        "light": "Лёгкая активность (1-2 тренировки/нед)",
-        "moderate": "Умеренная активность (3-4 тренировки/нед)",
-        "active": "Активный образ жизни (5-6 тренировок/нед)",
-        "very_active": "Очень активный (ежедневные тренировки)"
+        "sedentary": "Минимальная активность — менее 3 000 шагов в день",
+        "light": "Низкая активность — 3 000–7 000 шагов в день",
+        "moderate": "Средняя активность — 7 000–12 000 шагов в день",
+        "active": "Высокая активность — более 12 000 шагов в день",
     }
-    activity_ru = activity_map.get(payload.get("activity", "moderate"), "Умеренная активность")
+    activity_ru = activity_map.get(payload.get("activity", "moderate"), "Средняя активность — 7 000–12 000 шагов в день")
 
     training_level_map = {
         "beginner": "Новичок, почти не тренируется",
