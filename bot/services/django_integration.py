@@ -137,11 +137,15 @@ def extract_kbzu_from_plan_text(plan_text: str) -> Optional[Dict[str, Any]]:
     import re
 
     try:
-        # Паттерны для поиска значений
-        calories_pattern = r'калори[ийя].*?(\d+)\s*ккал'
-        protein_pattern = r'белк[иао].*?(\d+)\s*г'
-        fat_pattern = r'жир[ыао].*?(\d+)\s*г'
-        carbs_pattern = r'углевод[ыао].*?(\d+)\s*г'
+        # Улучшенные паттерны для поиска значений (более гибкие)
+        # Ищем: "Калории: 2100 ккал" или "калорий - 2100" или "2100 ккал"
+        calories_pattern = r'(?:калори[ийя]|энерг)[:\s\-—]*(\d+)\s*(?:ккал|кал)?'
+        # Ищем: "Белки: 130г" или "белка - 130" или "130г белка"
+        protein_pattern = r'(?:белк[иао]|протеин)[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*белк'
+        # Ищем: "Жиры: 70г" или "жира - 70" или "70г жира"
+        fat_pattern = r'(?:жир[ыао])[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*жир'
+        # Ищем: "Углеводы: 240г" или "углеводов - 240" или "240г углеводов"
+        carbs_pattern = r'(?:углевод[ыао])[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*углевод'
 
         # Ищем значения (case-insensitive)
         calories_match = re.search(calories_pattern, plan_text, re.IGNORECASE)
@@ -149,13 +153,28 @@ def extract_kbzu_from_plan_text(plan_text: str) -> Optional[Dict[str, Any]]:
         fat_match = re.search(fat_pattern, plan_text, re.IGNORECASE)
         carbs_match = re.search(carbs_pattern, plan_text, re.IGNORECASE)
 
+        # Извлекаем числа из найденных групп
+        def extract_number(match):
+            if not match:
+                return None
+            # Ищем первую непустую группу
+            for group in match.groups():
+                if group:
+                    return int(group)
+            return None
+
+        calories = extract_number(calories_match)
+        protein = extract_number(protein_match)
+        fat = extract_number(fat_match)
+        carbs = extract_number(carbs_match)
+
         # Если нашли все значения, возвращаем
-        if all([calories_match, protein_match, fat_match, carbs_match]):
+        if all([calories, protein, fat, carbs]):
             return {
-                "calories": int(calories_match.group(1)),
-                "protein": int(protein_match.group(1)),
-                "fat": int(fat_match.group(1)),
-                "carbs": int(carbs_match.group(1))
+                "calories": calories,
+                "protein": protein,
+                "fat": fat,
+                "carbs": carbs
             }
 
         logger.warning("Could not extract all KBZU values from plan text")
