@@ -1,5 +1,5 @@
 """Хендлеры для уровня тренированности и целей по телу."""
-from aiogram import Router, F
+from aiogram import Bot, Router, F
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
 
