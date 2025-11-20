@@ -49,7 +49,8 @@ async def send_test_results_to_django(
     last_name: Optional[str],
     username: Optional[str],
     survey_data: Dict[str, Any],
-    calculated_kbzu: Dict[str, Any]
+    calculated_kbzu: Dict[str, Any],
+    ai_recommendations: Optional[Dict[str, Any]] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Отправляет результаты AI теста в Django API.
@@ -61,6 +62,7 @@ async def send_test_results_to_django(
         username: Username в Telegram (опционально)
         survey_data: Данные опроса (gender, age, weight, height, activity, goal, target_weight_kg, tz)
         calculated_kbzu: Рассчитанные КБЖУ (calories, protein, fat, carbs)
+        ai_recommendations: AI рекомендации (plan_text, model, prompt_version) (опционально)
 
     Returns:
         Dict с результатом сохранения или None при ошибке
@@ -81,16 +83,32 @@ async def send_test_results_to_django(
     height_cm = parse_range_value(survey_data.get("height_cm"))
     target_weight_kg = parse_range_value(survey_data.get("target_weight_kg"))
 
+    # Маппинг activity levels: бот → Django
+    activity_mapping = {
+        "sedentary": "minimal",
+        "light": "low",
+        "moderate": "medium",
+        "active": "high"
+    }
+
+    activity_value = survey_data.get("activity", "moderate")
+    mapped_activity = activity_mapping.get(activity_value, "medium")
+
     # Преобразуем данные опроса в формат Django
     answers = {
         "age": int(age) if age else None,
         "gender": survey_data.get("gender"),
         "weight": float(weight_kg) if weight_kg else 0,
         "height": int(height_cm) if height_cm else 0,
-        "activity_level": survey_data.get("activity", "moderately_active"),
+        "activity_level": mapped_activity,
         "goal": survey_data.get("goal", "maintenance"),
         "target_weight": float(target_weight_kg) if target_weight_kg else None,
-        "timezone": survey_data.get("tz")
+        "timezone": survey_data.get("tz"),
+        "training_level": survey_data.get("training_level"),
+        "goals": survey_data.get("body_goals", []),
+        "health_restrictions": survey_data.get("health_limitations", []),
+        "current_body_type": survey_data.get("body_now_id"),
+        "ideal_body_type": survey_data.get("body_ideal_id")
     }
 
     payload = {
@@ -99,7 +117,8 @@ async def send_test_results_to_django(
         "last_name": last_name or "",
         "username": username or "",
         "answers": answers,
-        "calculated_kbzu": calculated_kbzu
+        "calculated_kbzu": calculated_kbzu,
+        "ai_recommendations": ai_recommendations or {}
     }
 
     try:
