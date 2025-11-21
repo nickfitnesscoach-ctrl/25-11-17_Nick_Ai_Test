@@ -32,10 +32,11 @@ interface TelegramProfile {
   language_code: string;
   is_premium: boolean;
   ai_test_completed: boolean;
-  recommended_calories: number;
-  recommended_protein: number;
-  recommended_fat: number;
-  recommended_carbs: number;
+  assigned_calories?: number;
+  assigned_protein?: number;
+  assigned_fat?: number;
+  assigned_carbs?: number;
+  trainer_plan?: string;
 }
 
 class ApiService {
@@ -196,10 +197,11 @@ interface TelegramProfile {
   language_code: string;
   is_premium: boolean;
   ai_test_completed: boolean;
-  recommended_calories: number;
-  recommended_protein: number;
-  recommended_fat: number;
-  recommended_carbs: number;
+  assigned_calories?: number;
+  assigned_protein?: number;
+  assigned_fat?: number;
+  assigned_carbs?: number;
+  trainer_plan?: string;
 }
 
 export const useProfile = () => {
@@ -270,7 +272,18 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  // Пользователь прошел тест - показываем дашборд
+  // Тест пройден, но КБЖУ еще не назначено тренером
+  if (!profile.assigned_calories) {
+    return (
+      <div className="pending-prompt">
+        <h2>Привет, {profile.first_name}! 👋</h2>
+        <p>Тренер скоро назначит вам персональный план питания.</p>
+        <div className="loader">🔄</div>
+      </div>
+    );
+  }
+
+  // Пользователь прошел тест И тренер назначил КБЖУ - показываем дашборд
   return (
     <div className="dashboard">
       <header>
@@ -279,16 +292,23 @@ export const Dashboard: React.FC = () => {
       </header>
 
       <section className="macros-section">
-        <h2>Ваши рекомендации КБЖУ</h2>
+        <h2>Ваш план питания</h2>
         <MacroChart
-          calories={profile.recommended_calories}
-          protein={profile.recommended_protein}
-          fat={profile.recommended_fat}
-          carbs={profile.recommended_carbs}
+          calories={profile.assigned_calories}
+          protein={profile.assigned_protein!}
+          fat={profile.assigned_fat!}
+          carbs={profile.assigned_carbs!}
         />
       </section>
 
-      <AIRecommendations />
+      {profile.trainer_plan && (
+        <section className="trainer-plan-section">
+          <h2>План от тренера 👨‍⚕️</h2>
+          <div className="plan-content">
+            <ReactMarkdown>{profile.trainer_plan}</ReactMarkdown>
+          </div>
+        </section>
+      )}
     </div>
   );
 };
@@ -393,68 +413,27 @@ export const MacroChart: React.FC<MacroChartProps> = ({
 
 ---
 
-## 6. AI Recommendations Component (AIRecommendations.tsx)
+## 6. Trainer Plan Component (Опционально)
+
+Компонент плана уже встроен в Dashboard. Если нужен отдельный компонент:
 
 ```typescript
-// src/components/AIRecommendations.tsx
+// src/components/TrainerPlan.tsx
 
-import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 
-interface AIRecommendationsData {
-  plan_text: string;
-  model: string;
-  prompt_version: string;
+interface TrainerPlanProps {
+  plan: string;
 }
 
-export const AIRecommendations: React.FC = () => {
-  const [recommendations, setRecommendations] = useState<AIRecommendationsData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      try {
-        // Получаем расширенный профиль с AI рекомендациями
-        const response = await fetch('/api/v1/users/profile/', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          },
-        });
-
-        const profile = await response.json();
-        setRecommendations(profile.ai_recommendations);
-      } catch (err) {
-        console.error('Failed to load AI recommendations', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecommendations();
-  }, []);
-
-  if (loading) {
-    return <div className="loading">Загрузка рекомендаций...</div>;
-  }
-
-  if (!recommendations) {
-    return null;
-  }
-
+export const TrainerPlan: React.FC<TrainerPlanProps> = ({ plan }) => {
   return (
-    <div className="ai-recommendations">
-      <h2>Ваш персональный план 🤖</h2>
-
+    <div className="trainer-plan">
+      <h2>План от тренера 👨‍⚕️</h2>
       <div className="plan-content">
-        <ReactMarkdown>{recommendations.plan_text}</ReactMarkdown>
+        <ReactMarkdown>{plan}</ReactMarkdown>
       </div>
-
-      <button className="regenerate-btn" onClick={() => {
-        window.Telegram.WebApp.openTelegramLink('https://t.me/AI_test_bot');
-      }}>
-        Обновить план
-      </button>
     </div>
   );
 };
