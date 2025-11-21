@@ -49,7 +49,6 @@ async def send_test_results_to_django(
     last_name: Optional[str],
     username: Optional[str],
     survey_data: Dict[str, Any],
-    calculated_kbzu: Dict[str, Any],
     ai_recommendations: Optional[Dict[str, Any]] = None
 ) -> Optional[Dict[str, Any]]:
     """
@@ -61,11 +60,13 @@ async def send_test_results_to_django(
         last_name: Фамилия пользователя (опционально)
         username: Username в Telegram (опционально)
         survey_data: Данные опроса (gender, age, weight, height, activity, goal, target_weight_kg, tz)
-        calculated_kbzu: Рассчитанные КБЖУ (calories, protein, fat, carbs)
         ai_recommendations: AI рекомендации (plan_text, model, prompt_version) (опционально)
 
     Returns:
         Dict с результатом сохранения или None при ошибке
+
+    Note:
+        КБЖУ не отправляется - назначается тренером в панели управления
     """
     # Получаем URL Django API из настроек
     django_api_url = getattr(settings, 'DJANGO_API_URL', None)
@@ -117,7 +118,6 @@ async def send_test_results_to_django(
         "last_name": last_name or "",
         "username": username or "",
         "answers": answers,
-        "calculated_kbzu": calculated_kbzu,
         "ai_recommendations": ai_recommendations or {}
     }
 
@@ -153,65 +153,4 @@ async def send_test_results_to_django(
             f"❌ Unexpected error sending to Django for telegram_id={telegram_id}: {e}",
             exc_info=True
         )
-        return None
-
-
-def extract_kbzu_from_plan_text(plan_text: str) -> Optional[Dict[str, Any]]:
-    """
-    Извлекает КБЖУ из текста плана, сгенерированного AI.
-
-    Ищет паттерны вида:
-    - Калории: 2100 ккал
-    - Белки: 130г
-    - Жиры: 70г
-    - Углеводы: 240г
-
-    Args:
-        plan_text: Текст плана от AI
-
-    Returns:
-        Dict с КБЖУ или None если не найдено
-    """
-    try:
-        # Улучшенные паттерны для поиска значений (более гибкие)
-        calories_pattern = r'(?:калори[ийя]|энерг)[:\s\-—]*(\d+)\s*(?:ккал|кал)?'
-        protein_pattern = r'(?:белк[иао]|протеин)[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*белк'
-        fat_pattern = r'(?:жир[ыао])[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*жир'
-        carbs_pattern = r'(?:углевод[ыао])[:\s\-—]*(\d+)\s*г?|(\d+)\s*г\s*углевод'
-
-        # Ищем значения (case-insensitive)
-        calories_match = re.search(calories_pattern, plan_text, re.IGNORECASE)
-        protein_match = re.search(protein_pattern, plan_text, re.IGNORECASE)
-        fat_match = re.search(fat_pattern, plan_text, re.IGNORECASE)
-        carbs_match = re.search(carbs_pattern, plan_text, re.IGNORECASE)
-
-        # Извлекаем числа из найденных групп
-        def extract_number(match):
-            if not match:
-                return None
-            # Ищем первую непустую группу
-            for group in match.groups():
-                if group:
-                    return int(group)
-            return None
-
-        calories = extract_number(calories_match)
-        protein = extract_number(protein_match)
-        fat = extract_number(fat_match)
-        carbs = extract_number(carbs_match)
-
-        # Если нашли все значения, возвращаем
-        if all([calories, protein, fat, carbs]):
-            return {
-                "calories": calories,
-                "protein": protein,
-                "fat": fat,
-                "carbs": carbs
-            }
-
-        logger.warning("Could not extract all KBZU values from plan text")
-        return None
-
-    except Exception as e:
-        logger.error(f"Error extracting KBZU from plan: {e}", exc_info=True)
         return None

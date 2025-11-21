@@ -18,7 +18,7 @@ from bot.services.ai import openrouter_client
 from bot.validators import validate_ai_response
 from bot.services.database import async_session_maker, UserRepository, SurveyRepository, PlanRepository
 from bot.services.events import log_survey_completed, log_plan_generated, log_ai_error
-from bot.services.django_integration import send_test_results_to_django, extract_kbzu_from_plan_text
+from bot.services.django_integration import send_test_results_to_django
 from bot.utils.logger import logger
 from .helpers import _plans_word
 
@@ -187,19 +187,6 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
             log_plan_generated(user_id, ai_model, validation_passed=validation["valid"])
 
             # ✅ Отправляем результаты в Django API (non-blocking)
-            # Извлекаем КБЖУ из текста плана
-            kbzu = extract_kbzu_from_plan_text(ai_text)
-            
-            if not kbzu:
-                logger.warning(f"Could not extract KBZU from AI plan for user {user_id}, using zeros")
-                # Используем нулевые значения - КБЖУ будет рассчитан в Mini App
-                kbzu = {
-                    "calories": 0,
-                    "protein": 0,
-                    "fat": 0,
-                    "carbs": 0
-                }
-            
             # Формируем AI рекомендации для Django
             ai_recommendations = {
                 "plan_text": ai_text,
@@ -207,14 +194,13 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
                 "prompt_version": prompt_version
             }
 
-            # Формируем данные для Django (теперь всегда отправляем)
+            # Отправляем данные в Django (КБЖУ назначается тренером в панели)
             await send_test_results_to_django(
                 telegram_id=user_id,
                 first_name=callback.from_user.first_name if callback.from_user else "",
                 last_name=callback.from_user.last_name if callback.from_user else None,
                 username=callback.from_user.username if callback.from_user else None,
                 survey_data=data,
-                calculated_kbzu=kbzu,
                 ai_recommendations=ai_recommendations
             )
 
