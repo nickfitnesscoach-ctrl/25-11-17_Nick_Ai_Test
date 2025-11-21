@@ -48,8 +48,7 @@ async def send_test_results_to_django(
     first_name: str,
     last_name: Optional[str],
     username: Optional[str],
-    survey_data: Dict[str, Any],
-    ai_recommendations: Optional[Dict[str, Any]] = None
+    survey_data: Dict[str, Any]
 ) -> Optional[Dict[str, Any]]:
     """
     Отправляет результаты AI теста в Django API.
@@ -59,14 +58,14 @@ async def send_test_results_to_django(
         first_name: Имя пользователя
         last_name: Фамилия пользователя (опционально)
         username: Username в Telegram (опционально)
-        survey_data: Данные опроса (gender, age, weight, height, activity, goal, target_weight_kg, tz)
-        ai_recommendations: AI рекомендации (plan_text, model, prompt_version) (опционально)
+        survey_data: Данные опроса (gender, age, weight, height, activity, goal, target_weight_kg, tz,
+                     training_level, goals, health_restrictions, body types)
 
     Returns:
         Dict с результатом сохранения или None при ошибке
 
     Note:
-        КБЖУ не отправляется - назначается тренером в панели управления
+        Отправляются только данные опроса. КБЖУ и AI план назначаются тренером в панели управления.
     """
     # Получаем URL Django API из настроек
     django_api_url = getattr(settings, 'DJANGO_API_URL', None)
@@ -117,8 +116,7 @@ async def send_test_results_to_django(
         "first_name": first_name,
         "last_name": last_name or "",
         "username": username or "",
-        "answers": answers,
-        "ai_recommendations": ai_recommendations or {}
+        "answers": answers
     }
 
     try:

@@ -186,22 +186,13 @@ async def confirm_and_generate(callback: CallbackQuery, state: FSMContext, bot: 
             log_survey_completed(user_id)
             log_plan_generated(user_id, ai_model, validation_passed=validation["valid"])
 
-            # ✅ Отправляем результаты в Django API (non-blocking)
-            # Формируем AI рекомендации для Django
-            ai_recommendations = {
-                "plan_text": ai_text,
-                "model": ai_model,
-                "prompt_version": prompt_version
-            }
-
-            # Отправляем данные в Django (КБЖУ назначается тренером в панели)
+            # ✅ Отправляем результаты в Django API (только данные опроса)
             await send_test_results_to_django(
                 telegram_id=user_id,
                 first_name=callback.from_user.first_name if callback.from_user else "",
                 last_name=callback.from_user.last_name if callback.from_user else None,
                 username=callback.from_user.username if callback.from_user else None,
-                survey_data=data,
-                ai_recommendations=ai_recommendations
+                survey_data=data
             )
 
         except Exception as db_error:
