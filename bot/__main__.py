@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramConflictError
 
 from bot.config import settings
 from bot.utils.logger import logger
@@ -74,10 +75,27 @@ async def main():
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
-    # Запустить polling
+    # Убедиться, что webhook отключен и ожидающие обновления очищены перед polling
+    await bot.delete_webhook(drop_pending_updates=True)
+
+    # Запустить polling c обработкой конфликтов параллельных инстансов
     try:
-        logger.info("[OK] Bot started successfully!")
-        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            logger.info(f"[OK] Bot started successfully! Polling attempt {attempt}/{max_attempts}")
+            try:
+                await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+            except TelegramConflictError as conflict_error:
+                logger.error(
+                    "[CONFLICT] Another getUpdates session is running. "
+                    "Ensure only one bot instance is active. Error: %s",
+                    conflict_error,
+                )
+                if attempt == max_attempts:
+                    raise
+                await asyncio.sleep(5)
+                continue
+            break
     except KeyboardInterrupt:
         logger.info("[PAUSE] Bot stopped by user")
     except Exception as e:
