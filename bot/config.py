@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     # Django API Integration
     DJANGO_API_URL: Optional[str] = None  # URL Django API (e.g., "http://localhost:8000/api/v1" or ngrok URL)
 
+    # Telegram Mini App
+    WEB_APP_URL: Optional[str] = None  # URL для Telegram Mini App (e.g., "https://your-domain.com" or ngrok URL)
+
     # Environment
     ENVIRONMENT: str = "development"
 

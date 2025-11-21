@@ -194,3 +194,64 @@ def get_contact_trainer_keyboard(trainer_username: str = None) -> InlineKeyboard
     )
 
     return builder.as_markup()
+
+
+def get_open_webapp_keyboard() -> InlineKeyboardMarkup:
+    """
+    Клавиатура с кнопкой для открытия Web App (Mini App).
+    """
+    from aiogram.types import WebAppInfo
+    
+    builder = InlineKeyboardBuilder()
+    
+    # Проверяем, настроен ли URL для Web App
+    if settings.WEB_APP_URL:
+        builder.row(
+            InlineKeyboardButton(
+                text="📱 Открыть приложение",
+                web_app=WebAppInfo(url=settings.WEB_APP_URL)
+            )
+        )
+    
+    # Дополнительно добавляем кнопку связи с тренером
+    builder.row(
+        InlineKeyboardButton(
+            text="✉️ Написать тренеру",
+            url=f"https://t.me/{settings.TRAINER_USERNAME}"
+        )
+    )
+    
+    return builder.as_markup()
+
+
+def get_admin_start_keyboard() -> InlineKeyboardMarkup:
+    """
+    Клавиатура для админа с кнопками Web App и начала опроса.
+    """
+    from aiogram.types import WebAppInfo
+    
+    builder = InlineKeyboardBuilder()
+    
+    # Кнопка открытия Web App (если настроено)
+    if settings.WEB_APP_URL:
+        builder.row(
+            InlineKeyboardButton(
+                text="📱 Открыть панель тренера",
+                web_app=WebAppInfo(url=settings.WEB_APP_URL)
+            )
+        )
+    
+    # Кнопка начала опроса
+    builder.row(
+        InlineKeyboardButton(text="🚀 Начать опрос (тест)", callback_data="survey:start")
+    )
+    
+    # Кнопка связи с собой (для теста)
+    builder.row(
+        InlineKeyboardButton(
+            text="✉️ Написать тренеру",
+            url=f"https://t.me/{settings.TRAINER_USERNAME}"
+        )
+    )
+    
+    return builder.as_markup()
