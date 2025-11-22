@@ -17,6 +17,7 @@ from .survey import (
     get_start_survey_keyboard,
     get_contact_trainer_keyboard,
     get_open_webapp_keyboard,
+    get_admin_panel_open_keyboard,
     get_admin_start_keyboard,
 )
 
@@ -35,5 +36,6 @@ __all__ = [
     "get_start_survey_keyboard",
     "get_contact_trainer_keyboard",
     "get_open_webapp_keyboard",
+    "get_admin_panel_open_keyboard",
     "get_admin_start_keyboard",
 ]

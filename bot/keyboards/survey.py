@@ -224,22 +224,40 @@ def get_open_webapp_keyboard() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def get_admin_panel_open_keyboard() -> InlineKeyboardMarkup:
+    """Кнопка открытия панели тренера (админ Mini App)."""
+
+    from aiogram.types import WebAppInfo
+
+    builder = InlineKeyboardBuilder()
+
+    target_url = settings.ADMIN_WEB_APP_URL or settings.WEB_APP_URL
+
+    if target_url:
+        builder.row(
+            InlineKeyboardButton(
+                text="📱 Открыть панель тренера",
+                web_app=WebAppInfo(url=target_url)
+            )
+        )
+
+    return builder.as_markup()
+
+
 def get_admin_start_keyboard() -> InlineKeyboardMarkup:
     """
     Клавиатура для админа с кнопками Web App и начала опроса.
     """
-    from aiogram.types import WebAppInfo
-    
+
     builder = InlineKeyboardBuilder()
-    
-    # Кнопка открытия Web App (если настроено)
-    if settings.WEB_APP_URL:
-        builder.row(
-            InlineKeyboardButton(
-                text="📱 Открыть панель тренера",
-                web_app=WebAppInfo(url=settings.WEB_APP_URL)
-            )
+
+    # Кнопка открытия админ-панели через callback (с проверкой прав)
+    builder.row(
+        InlineKeyboardButton(
+            text="📱 Открыть панель тренера",
+            callback_data="admin_panel:open"
         )
+    )
     
     # Кнопка начала опроса
     builder.row(

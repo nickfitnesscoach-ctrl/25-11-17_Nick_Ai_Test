@@ -70,6 +70,7 @@ class Settings(BaseSettings):
 
     # Telegram Mini App
     WEB_APP_URL: Optional[str] = None  # URL для Telegram Mini App (e.g., "https://your-domain.com" or ngrok URL)
+    ADMIN_WEB_APP_URL: Optional[str] = None  # Отдельный URL для панели тренера (если отличается от клиентского)
 
     # Environment
     ENVIRONMENT: str = "development"

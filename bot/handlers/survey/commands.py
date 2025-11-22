@@ -10,7 +10,13 @@ from aiogram.fsm.context import FSMContext
 from bot.config import settings
 from bot.states import SurveyStates
 from bot.texts.survey import WELCOME_MESSAGE, GENDER_QUESTION
-from bot.keyboards import get_start_survey_keyboard, get_gender_keyboard, get_admin_start_keyboard, get_open_webapp_keyboard
+from bot.keyboards import (
+    get_start_survey_keyboard,
+    get_gender_keyboard,
+    get_admin_start_keyboard,
+    get_open_webapp_keyboard,
+    get_admin_panel_open_keyboard,
+)
 from bot.services.events import log_survey_started
 from bot.utils.logger import logger
 
@@ -88,4 +94,33 @@ async def start_survey(callback: CallbackQuery, state: FSMContext):
         reply_markup=get_gender_keyboard(),
         parse_mode="HTML"
     )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin_panel:open")
+async def open_trainer_panel(callback: CallbackQuery):
+    """Открытие панели тренера с проверкой прав."""
+
+    user_id = callback.from_user.id
+
+    # Проверяем, что пользователь является админом
+    if user_id != settings.BOT_ADMIN_ID:
+        await callback.answer("Доступ только для тренера", show_alert=True)
+        return
+
+    target_url = settings.ADMIN_WEB_APP_URL or settings.WEB_APP_URL
+
+    if target_url:
+        await callback.message.answer(
+            "📱 <b>Панель тренера</b>\n\nНажмите кнопку ниже, чтобы открыть админ-интерфейс.",
+            reply_markup=get_admin_panel_open_keyboard(),
+            parse_mode="HTML",
+            disable_notification=True,
+        )
+    else:
+        await callback.message.answer(
+            "⚠️ URL панели тренера не настроен. Укажите ADMIN_WEB_APP_URL или WEB_APP_URL в конфигурации.",
+            disable_notification=True,
+        )
+
     await callback.answer()
