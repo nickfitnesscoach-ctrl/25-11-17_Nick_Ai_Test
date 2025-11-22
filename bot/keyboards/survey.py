@@ -85,12 +85,7 @@ def get_health_limitations_keyboard(selected: list[str] | None = None) -> Inline
 
 
 def get_body_type_keyboard(variant_id: int) -> InlineKeyboardMarkup:
-    """
-    Клавиатура под одной картинкой типа фигуры.
-
-    Args:
-        variant_id: ID варианта (1, 2, 3, ...)
-    """
+    """Клавиатура под одной картинкой типа фигуры."""
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(text=f"✅ Выбрать вариант {variant_id}", callback_data=f"body:{variant_id}")
@@ -99,12 +94,7 @@ def get_body_type_keyboard(variant_id: int) -> InlineKeyboardMarkup:
 
 
 def get_body_navigation_keyboard(stage: str) -> InlineKeyboardMarkup:
-    """
-    Клавиатура навигации после показа всех вариантов тела.
-
-    Args:
-        stage: "now" или "ideal"
-    """
+    """Клавиатура навигации после показа всех вариантов тела."""
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(text="🔄 Посмотреть ещё раз", callback_data=f"body_review:{stage}")
@@ -116,7 +106,6 @@ def get_timezone_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура для выбора часового пояса."""
     builder = InlineKeyboardBuilder()
 
-    # Популярные часовые пояса (2 в ряд)
     tz_items = list(POPULAR_TIMEZONES.items())
     for i in range(0, len(tz_items), 2):
         row_buttons = []
@@ -131,7 +120,6 @@ def get_timezone_keyboard() -> InlineKeyboardMarkup:
                 )
         builder.row(*row_buttons)
 
-    # Кнопка "Другой..."
     builder.row(
         InlineKeyboardButton(text="✏️ Другой часовой пояс...", callback_data="tz:manual")
     )
@@ -140,7 +128,7 @@ def get_timezone_keyboard() -> InlineKeyboardMarkup:
 
 
 def get_target_weight_keyboard() -> InlineKeyboardMarkup:
-    """Клавиатура для шага целевого веса (с возможностью пропустить)."""
+    """Клавиатура для шага целевого веса."""
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(text="➡️ Пропустить (поддержание веса)", callback_data="target_weight:skip")
@@ -159,7 +147,7 @@ def get_confirmation_keyboard() -> InlineKeyboardMarkup:
 
 
 def get_empty_keyboard() -> InlineKeyboardMarkup:
-    """Пустая клавиатура (без кнопок)."""
+    """Пустая клавиатура."""
     builder = InlineKeyboardBuilder()
     return builder.as_markup()
 
@@ -174,19 +162,12 @@ def get_start_survey_keyboard() -> InlineKeyboardMarkup:
 
 
 def get_contact_trainer_keyboard(trainer_username: str = None) -> InlineKeyboardMarkup:
-    """
-    Клавиатура со ссылкой на тренера.
-
-    Args:
-        trainer_username: Username тренера в Telegram (без @)
-    """
+    """Клавиатура со ссылкой на тренера."""
     builder = InlineKeyboardBuilder()
 
-    # Если указан username, создаём прямую ссылку на диалог
     if trainer_username:
         url = f"https://t.me/{trainer_username}"
     else:
-        # Использовать username из конфигурации
         url = f"https://t.me/{settings.TRAINER_USERNAME}"
 
     builder.row(
@@ -198,22 +179,21 @@ def get_contact_trainer_keyboard(trainer_username: str = None) -> InlineKeyboard
 
 def get_open_webapp_keyboard() -> InlineKeyboardMarkup:
     """
-    Клавиатура с кнопкой для открытия Web App (Mini App).
+    Клавиатура для КЛИЕНТА - открывает / (КБЖУ трекер на главной).
     """
     from aiogram.types import WebAppInfo
     
     builder = InlineKeyboardBuilder()
     
-    # Проверяем, настроен ли URL для Web App
     if settings.WEB_APP_URL:
+        # Клиенты идут на главную / - там КБЖУ трекер
         builder.row(
             InlineKeyboardButton(
-                text="📱 Открыть приложение",
+                text="📱 Открыть КБЖУ трекер",
                 web_app=WebAppInfo(url=settings.WEB_APP_URL)
             )
         )
     
-    # Дополнительно добавляем кнопку связи с тренером
     builder.row(
         InlineKeyboardButton(
             text="✉️ Написать тренеру",
@@ -226,27 +206,26 @@ def get_open_webapp_keyboard() -> InlineKeyboardMarkup:
 
 def get_admin_start_keyboard() -> InlineKeyboardMarkup:
     """
-    Клавиатура для админа с кнопками Web App и начала опроса.
+    Клавиатура для АДМИНА - открывает /admin (панель тренера).
     """
     from aiogram.types import WebAppInfo
     
     builder = InlineKeyboardBuilder()
     
-    # Кнопка открытия Web App (если настроено)
     if settings.WEB_APP_URL:
+        # Админ идёт на /admin - панель тренера
+        admin_url = f"{settings.WEB_APP_URL}/admin"
         builder.row(
             InlineKeyboardButton(
                 text="📱 Открыть панель тренера",
-                web_app=WebAppInfo(url=settings.WEB_APP_URL)
+                web_app=WebAppInfo(url=admin_url)
             )
         )
     
-    # Кнопка начала опроса
     builder.row(
         InlineKeyboardButton(text="🚀 Начать опрос (тест)", callback_data="survey:start")
     )
     
-    # Кнопка связи с собой (для теста)
     builder.row(
         InlineKeyboardButton(
             text="✉️ Написать тренеру",

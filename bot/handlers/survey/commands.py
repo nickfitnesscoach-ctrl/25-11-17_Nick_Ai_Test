@@ -22,19 +22,26 @@ async def cmd_start(message: Message, state: FSMContext):
     """Команда /start - главная точка входа в бота."""
     user_id = message.from_user.id
     logger.info(f"User {user_id} pressed /start")
+    logger.info(f"BOT_ADMIN_ID: {settings.BOT_ADMIN_ID}, WEB_APP_URL: {settings.WEB_APP_URL}")
 
     # Проверяем, является ли пользователь админом
     if user_id == settings.BOT_ADMIN_ID:
+        logger.info(f"User {user_id} IS ADMIN - showing admin keyboard")
+        admin_url = f"{settings.WEB_APP_URL}/admin"
+        logger.info(f"Admin URL will be: {admin_url}")
+        
         # Для админа показываем кнопку открытия Mini App
         await message.answer(
             "👋 <b>Привет, Админ!</b>\n\n"
-            "📱 <b>Откройте панель тренера</b>, чтобы управлять заявками и клиентами.\n\n"
+            f"📱 <b>Откройте панель тренера</b>, чтобы управлять заявками и клиентами.\n\n"
+            f"<i>Debug: URL = {admin_url}</i>\n\n"
             "Или начните опрос, если хотите протестировать бота.",
             reply_markup=get_admin_start_keyboard(),
             parse_mode="HTML",
             disable_notification=True
         )
     else:
+        logger.info(f"User {user_id} is NOT admin")
         # Для обычных пользователей - стандартное приветствие
         await message.answer(
             WELCOME_MESSAGE,
@@ -78,12 +85,12 @@ async def start_survey(callback: CallbackQuery, state: FSMContext):
     """Начало опроса после нажатия кнопки."""
     user_id = callback.from_user.id
     log_survey_started(user_id)
-
-    # Очистить старое состояние перед началом нового опроса
-    await state.clear()
-
-    await state.set_state(SurveyStates.GENDER)
-    await callback.message.edit_text(
+    
+    logger.info(f"User {user_id} started survey")
+    
+    # Переходим к первому вопросу - выбор пола
+    await state.set_state(SurveyStates.waiting_for_gender)
+    await callback.message.answer(
         GENDER_QUESTION,
         reply_markup=get_gender_keyboard(),
         parse_mode="HTML"

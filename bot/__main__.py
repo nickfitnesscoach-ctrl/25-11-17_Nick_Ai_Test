@@ -1,6 +1,4 @@
-"""
-Точка входа приложения.
-"""
+"""Точка входа приложения."""
 
 import asyncio
 import sys
@@ -37,19 +35,16 @@ async def on_startup():
                     missing_images.append(f"{gender}/{stage}/{variant_id}")
 
     if missing_images:
-        logger.warning(f"[!] Missing body type images: {', '.join(missing_images)}")
-        logger.warning("[!] Users will see fallback messages for missing images")
+        logger.warning(f"[WARN] Missing body type images: {missing_images}")
     else:
         logger.info("[OK] All body type images found")
-
-    # Инициализация БД (в production используйте Alembic)
-    # await init_db()
 
 
 async def on_shutdown():
     """Действия при остановке бота."""
     logger.info("[STOP] Shutting down bot...")
     await close_db()
+    logger.info("[OK] Database connection closed")
 
 
 async def main():
